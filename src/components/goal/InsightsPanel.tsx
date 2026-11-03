@@ -1,5 +1,8 @@
 import { Area, ComposedChart, CartesianGrid, Line, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useQuery } from "@tanstack/react-query";
 import { initials, isDelayed, type Goal, type Task } from "@/lib/goals";
+import { supabase } from "@/integrations/supabase/client";
+import { UserAvatar } from "@/components/social/UserAvatar";
 
 function lastDays(n: number) {
   return Array.from({ length: n }, (_, i) => {
@@ -10,6 +13,15 @@ function lastDays(n: number) {
 }
 
 export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
+  const names = goal.participants.map((p) => p.name);
+  const { data: profiles } = useQuery({
+    queryKey: ["participant-profiles", goal.id, names.join(",")],
+    enabled: names.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("id, username, avatar_url").in("username", names);
+      return data ?? [];
+    },
+  });
   const done = tasks.filter((t) => t.status === "done").length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
   const delayed = tasks.filter((t) => isDelayed(t)).length;
@@ -29,10 +41,15 @@ export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
           {goal.participants.map((p) => {
             const mine = tasks.filter((t) => t.assignee === p.name);
             const late = mine.some((t) => isDelayed(t));
+            const prof = profiles?.find((x) => x.username === p.name);
             return (
               <div key={p.name} className="text-center" title={`${p.name} — ${p.role}`}>
-                <div className="relative mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-foreground">
-                  {initials(p.name)}
+                <div className="relative mx-auto h-11 w-11">
+                  {prof ? (
+                    <UserAvatar username={prof.username} url={prof.avatar_url} className="h-11 w-11" />
+                  ) : (
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-foreground">{initials(p.name)}</div>
+                  )}
                   <span className={`absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full ring-2 ring-background ${late ? "bg-destructive" : "bg-success"}`} />
                 </div>
                 <div className="mt-1 truncate text-xs">{p.name}</div>
