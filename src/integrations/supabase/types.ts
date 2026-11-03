@@ -14,7 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      goals: {
+        Row: {
+          created_at: string
+          deadline: string | null
+          description: string
+          id: string
+          participants: Json
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deadline?: string | null
+          description?: string
+          id?: string
+          participants?: Json
+          title: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          deadline?: string | null
+          description?: string
+          id?: string
+          participants?: Json
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          assignee: string | null
+          completed_at: string | null
+          created_at: string
+          deadline: string | null
+          description: string
+          goal_id: string
+          id: string
+          position: number
+          priority: string
+          status: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          assignee?: string | null
+          completed_at?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string
+          goal_id: string
+          id?: string
+          position?: number
+          priority?: string
+          status?: string
+          title: string
+          user_id?: string
+        }
+        Update: {
+          assignee?: string | null
+          completed_at?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string
+          goal_id?: string
+          id?: string
+          position?: number
+          priority?: string
+          status?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
