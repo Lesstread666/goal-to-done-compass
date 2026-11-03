@@ -62,7 +62,7 @@ function extractText(output: unknown): string {
 async function generatePlanText(input: string): Promise<string> {
   // Lovable hosting injects LOVABLE_API_KEY automatically; self-hosted
   // deployments (e.g. Vercel) fall back to a direct OpenAI call.
-  if (process.env.LOVABLE_API_KEY) {
+  if (process.env["LOVABLE_API_KEY"]) {
     const { generateResponse } = await import("@lovable.dev/ai-gateway");
     const res = await generateResponse({
       model: "openai/gpt-6-astra",
@@ -73,7 +73,7 @@ async function generatePlanText(input: string): Promise<string> {
     return extractText(res.output);
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env["OPENAI_API_KEY"];
   if (!apiKey) {
     throw new Error(
       "No AI key configured on this server. Add OPENAI_API_KEY in your hosting environment (Vercel → Project → Settings → Environment Variables) and redeploy, or publish through Lovable where the AI connection is automatic.",
