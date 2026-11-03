@@ -1,24 +1,37 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Footprints } from "lucide-react";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Stepwise — Turn big goals into small tasks" },
+      { name: "description", content: "Enter a goal. AI breaks it into prioritized tasks, assigns roles and tracks your team's progress." },
+      { property: "og:title", content: "Stepwise — Turn big goals into small tasks" },
+      { property: "og:description", content: "Enter a goal. AI breaks it into prioritized tasks, assigns roles and tracks your team's progress." },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+      <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-accent-foreground glow">
+        <Footprints className="h-7 w-7" />
+      </div>
+      <h1 className="max-w-2xl text-4xl font-bold tracking-tight md:text-6xl">
+        Big goal? <span className="text-primary">Take it step by step.</span>
+      </h1>
+      <p className="mt-5 max-w-lg text-muted-foreground">
+        Describe what you want to achieve. Stepwise breaks it into small tasks with priorities, roles and deadlines — and
+        flags anything that falls behind.
+      </p>
+      <Button asChild size="lg" className="mt-8 glow">
+        <Link to="/dashboard">
+          Open dashboard <ArrowRight />
+        </Link>
+      </Button>
+    </main>
   );
 }
