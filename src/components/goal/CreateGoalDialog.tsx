@@ -73,7 +73,7 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            m.mutate({ data: { title, description, deadline, participants: names.map((_n, i) => names[i].trim() || `Teammate ${i + 1}`) } });
+            m.mutate({ data: { title, description, deadline, participants: names.map((n, i) => n.trim() || `Teammate ${i + 1}`) } });
           }}
         >
           <div className="space-y-1.5">
