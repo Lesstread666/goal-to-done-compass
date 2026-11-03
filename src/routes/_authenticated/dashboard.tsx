@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
 import { ListChecks, LayoutGrid, LogOut, Search, Target, Users, AlertTriangle } from "lucide-react";
@@ -8,6 +8,8 @@ import { goalsQuery, tasksQuery, isDelayed, initials, type Task, type Goal } fro
 import { CreateGoalDialog } from "@/components/goal/CreateGoalDialog";
 import { TaskCard } from "@/components/goal/TaskCard";
 import { InsightsPanel } from "@/components/goal/InsightsPanel";
+import { EditGoalDialog } from "@/components/goal/EditGoalDialog";
+import { DeleteDialog } from "@/components/goal/DeleteDialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -20,6 +22,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
       { name: "description", content: "Your goal projects, tasks and team progress." },
       { property: "og:title", content: "Dashboard — Ticklist" },
       { property: "og:description", content: "Your goal projects, tasks and team progress." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(goalsQuery()),
@@ -102,6 +106,7 @@ function NavIcon({ icon: Icon, label, active }: { icon: typeof Users; label: str
 }
 
 function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSelect: (id: string) => void }) {
+  const qc = useQueryClient();
   const { data: tasks = [], isLoading } = useQuery(tasksQuery(goal.id));
   const [q, setQ] = useState("");
   const [view, setView] = useState<"board" | "team">("board");
@@ -117,7 +122,17 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
             <h1 className="text-2xl font-bold md:text-3xl">{goal.title}</h1>
             {goal.deadline && <p className="mt-1 text-sm text-muted-foreground">Deadline {new Date(goal.deadline).toLocaleDateString()}</p>}
           </div>
-          <CreateGoalDialog onCreated={onSelect} />
+          <div className="flex flex-wrap items-center gap-2">
+            <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} />
+            <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} onDelete={async () => {
+              const { error } = await supabase.from("goals").delete().eq("id", goal.id).select("id").single();
+              if (error) throw error;
+              qc.removeQueries({ queryKey: ["tasks", goal.id] });
+              await qc.invalidateQueries({ queryKey: ["goals"] });
+              onSelect(goals.find((g) => g.id !== goal.id)?.id ?? "");
+            }} />
+            <CreateGoalDialog onCreated={onSelect} />
+          </div>
         </div>
 
         <select
@@ -162,7 +177,7 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
                     {c.label} <span className="text-muted-foreground">({list.length})</span>
                   </h3>
                   <div className="space-y-3">
-                    {list.map((t) => <TaskCard key={t.id} task={t} />)}
+                    {list.map((t) => <TaskCard key={t.id} task={t} participants={goal.participants} />)}
                   </div>
                 </div>
               );
@@ -182,11 +197,12 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {mine.map((t) => <TaskCard key={t.id} task={t} />)}
+                    {mine.map((t) => <TaskCard key={t.id} task={t} participants={goal.participants} />)}
                   </div>
                 </div>
               );
             })}
+            {filtered.some((t) => !t.assignee || !goal.participants.some((p) => p.name === t.assignee)) && <section className="border-t pt-4"><h3 className="mb-3 text-sm font-semibold">Unassigned</h3><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{filtered.filter((t) => !t.assignee || !goal.participants.some((p) => p.name === t.assignee)).map((t) => <TaskCard key={t.id} task={t} participants={goal.participants} />)}</div></section>}
           </div>
         )}
       </div>

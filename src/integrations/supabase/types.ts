@@ -102,7 +102,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      edit_goal_team: {
+        Args: {
+          p_assignments: Json
+          p_deadline: string
+          p_description: string
+          p_goal_id: string
+          p_participants: Json
+          p_title: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

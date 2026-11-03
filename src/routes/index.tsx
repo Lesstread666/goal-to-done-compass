@@ -9,6 +9,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Enter a goal. AI breaks it into prioritized tasks, assigns roles and tracks your team's progress." },
       { property: "og:title", content: "Ticklist — Turn big goals into small tasks" },
       { property: "og:description", content: "Enter a goal. AI breaks it into prioritized tasks, assigns roles and tracks your team's progress." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Index,

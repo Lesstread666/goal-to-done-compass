@@ -1,7 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CalendarDays, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
+import { EditTaskDialog } from "@/components/goal/EditTaskDialog";
+import { DeleteDialog } from "@/components/goal/DeleteDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { initials, isDelayed, type Task } from "@/lib/goals";
+import { initials, isDelayed, type Task, type Participant } from "@/lib/goals";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -11,7 +14,7 @@ const prio = {
   low: "bg-accent text-accent-foreground",
 };
 
-export function TaskCard({ task }: { task: Task }) {
+export function TaskCard({ task, participants = [] }: { task: Task; participants?: Participant[] | null }) {
   const qc = useQueryClient();
   const delayed = isDelayed(task);
   const update = useMutation({
@@ -20,13 +23,22 @@ export function TaskCard({ task }: { task: Task }) {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks", task.goal_id] }),
+    onError: () => toast.error("Could not update task. Please try again."),
   });
 
   return (
     <div className={cn("glass rounded-xl p-3.5 transition", delayed && "border-destructive/60 bg-destructive/10")}>
       <div className="flex items-start gap-2">
         {task.status === "done" && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
-        <h4 className={cn("text-sm font-semibold leading-snug", task.status === "done" && "text-muted-foreground line-through")}>{task.title}</h4>
+        <h4 className={cn("min-w-0 flex-1 break-words text-sm font-semibold leading-snug", task.status === "done" && "text-muted-foreground line-through")}>{task.title}</h4>
+      </div>
+      <div className="flex justify-end gap-1">
+        <EditTaskDialog task={task} participants={participants} />
+        <DeleteDialog label="Delete task" description={`Remove “${task.title}” from this project.`} onDelete={async () => {
+          const { error } = await supabase.from("tasks").delete().eq("id", task.id).select("id").single();
+          if (error) throw error;
+          await qc.invalidateQueries({ queryKey: ["tasks", task.goal_id] });
+        }} />
       </div>
       {task.description && <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">{task.description}</p>}
       {delayed && (
