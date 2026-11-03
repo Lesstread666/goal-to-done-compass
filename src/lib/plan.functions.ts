@@ -46,26 +46,63 @@ type Plan = {
   tasks: { title: string; description: string; priority: string; assignee: string; deadline: string }[];
 };
 
+const INSTRUCTIONS =
+  "You are a project planner who helps overwhelmed people turn big goals into small, concrete, actionable tasks. Each task should be doable in a few hours to two days. Order tasks in logical sequence. Assign each participant a fitting role and spread tasks across participants by role. Deadlines must be between today and the goal deadline, spaced realistically.";
+
+function extractText(output: unknown): string {
+  let text = "";
+  for (const item of (output as { type?: string; content?: { type?: string; text?: string }[] }[] | undefined) ?? []) {
+    if (item.type === "message") {
+      for (const c of item.content ?? []) if (c.type === "output_text") text += c.text ?? "";
+    }
+  }
+  return text;
+}
+
+async function generatePlanText(input: string): Promise<string> {
+  // Lovable hosting injects LOVABLE_API_KEY automatically; self-hosted
+  // deployments (e.g. Vercel) fall back to a direct OpenAI call.
+  if (process.env["LOVABLE_API_KEY"]) {
+    const { generateResponse } = await import("@lovable.dev/ai-gateway");
+    const res = await generateResponse({
+      model: "openai/gpt-6-astra",
+      instructions: INSTRUCTIONS,
+      input,
+      text: { format: { type: "json_schema", name: "plan", strict: true, schema } },
+    });
+    return extractText(res.output);
+  }
+
+  const apiKey = process.env["OPENAI_API_KEY"];
+  if (!apiKey) {
+    throw new Error(
+      "No AI key configured on this server. Add OPENAI_API_KEY in your hosting environment (Vercel → Project → Settings → Environment Variables) and redeploy, or publish through Lovable where the AI connection is automatic.",
+    );
+  }
+  const r = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "gpt-4.1",
+      instructions: INSTRUCTIONS,
+      input,
+      text: { format: { type: "json_schema", name: "plan", strict: true, schema } },
+    }),
+  });
+  if (!r.ok) throw new Error(`OpenAI request failed (${r.status}): ${(await r.text()).slice(0, 300)}`);
+  const text = extractText((await r.json()).output);
+  if (!text) throw new Error("The AI returned an empty plan. Please try again.");
+  return text;
+}
+
 export const createGoalPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }) => {
-    const { generateResponse } = await import("@lovable.dev/ai-gateway");
     const today = new Date().toISOString().slice(0, 10);
-    const res = await generateResponse({
-      model: "openai/gpt-6-astra",
-      instructions:
-        "You are a project planner who helps overwhelmed people turn big goals into small, concrete, actionable tasks. Each task should be doable in a few hours to two days. Order tasks in logical sequence. Assign each participant a fitting role and spread tasks across participants by role. Deadlines must be between today and the goal deadline, spaced realistically.",
-      input: `Today: ${today}\nGoal: ${data.title}\nDescription: ${data.description || "(none)"}\nGoal deadline: ${data.deadline}\nParticipants (use these exact names as assignee): ${data.participants.join(", ")}\nCreate 6-14 tasks.`,
-      text: { format: { type: "json_schema", name: "plan", strict: true, schema } },
-    });
-
-    let text = "";
-    for (const item of res.output ?? []) {
-      if (item.type === "message") {
-        for (const c of item.content) if (c.type === "output_text") text += c.text;
-      }
-    }
+    const text = await generatePlanText(
+      `Today: ${today}\nGoal: ${data.title}\nDescription: ${data.description || "(none)"}\nGoal deadline: ${data.deadline}\nParticipants (use these exact names as assignee): ${data.participants.join(", ")}\nCreate 6-14 tasks.`,
+    );
     const plan = JSON.parse(text) as Plan;
 
     const participants = data.participants.map((name) => ({
