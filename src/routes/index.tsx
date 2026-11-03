@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Footprints } from "lucide-react";
+import { ArrowRight, ListChecks } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,7 +18,7 @@ function Index() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
       <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent text-accent-foreground glow">
-        <Footprints className="h-7 w-7" />
+        <ListChecks className="h-7 w-7" />
       </div>
       <h1 className="max-w-2xl text-4xl font-bold tracking-tight md:text-6xl">
         Big goal? <span className="text-primary">Take it step by step.</span>

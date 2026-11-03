@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
-import { Footprints, LayoutGrid, LogOut, Search, Target, Users, AlertTriangle } from "lucide-react";
+import { ListChecks, LayoutGrid, LogOut, Search, Target, Users, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { goalsQuery, tasksQuery, isDelayed, initials, type Task, type Goal } from "@/lib/goals";
 import { CreateGoalDialog } from "@/components/goal/CreateGoalDialog";
@@ -43,7 +43,7 @@ function Dashboard() {
     <div className="flex min-h-screen">
       <nav className="hidden w-20 flex-col items-center gap-2 border-r bg-sidebar py-6 md:flex">
         <div className="mb-6 text-primary">
-          <Footprints className="h-7 w-7" />
+          <ListChecks className="h-7 w-7" />
         </div>
         <NavIcon icon={LayoutGrid} label="Dashboard" active />
         <div className="mt-auto">
