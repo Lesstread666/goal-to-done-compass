@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { toast } from "sonner";
+import { DndContext, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { z } from "zod";
 import { ListChecks, LayoutGrid, LogOut, Search, Target, Users, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,7 +86,10 @@ function Dashboard() {
         {goal ? (
           <GoalView goal={goal} goals={goals} onSelect={select} />
         ) : (
-          <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+          <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+            <button onClick={() => supabase.auth.signOut()} className="absolute top-4 right-4 flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm hover:bg-muted md:hidden">
+              <LogOut className="h-4 w-4" /> Sign out
+            </button>
             <Target className="h-12 w-12 text-primary" />
             <h1 className="text-2xl font-bold">What big goal are you working on?</h1>
             <p className="max-w-sm text-muted-foreground">Create a goal project and let AI break it into small, doable tasks for you and your team.</p>
@@ -116,6 +121,12 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
   return (
     <div className="grid gap-6 p-4 md:p-8 xl:grid-cols-[1fr_300px]">
       <div className="min-w-0">
+        <div className="mb-3 flex items-center justify-between md:hidden">
+          <span className="flex items-center gap-2 font-semibold text-primary"><ListChecks className="h-5 w-5" /> Ticklist</span>
+          <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm hover:bg-muted">
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+        </div>
         <div className="text-sm text-muted-foreground">Goal projects › <span className="text-foreground">{goal.title}</span></div>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -168,21 +179,7 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
         {isLoading ? (
           <p className="mt-8 text-muted-foreground">Loading tasks…</p>
         ) : view === "board" ? (
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            {columns.map((c) => {
-              const list = filtered.filter((t) => t.status === c.key);
-              return (
-                <div key={c.key} className="rounded-2xl border bg-panel/60 p-3">
-                  <h3 className="mb-3 px-1 text-sm font-semibold tracking-wide uppercase">
-                    {c.label} <span className="text-muted-foreground">({list.length})</span>
-                  </h3>
-                  <div className="space-y-3">
-                    {list.map((t) => <TaskCard key={t.id} task={t} participants={goal.participants} />)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <Board goal={goal} tasks={filtered} />
         ) : (
           <div className="mt-5 space-y-4">
             {goal.participants.map((p) => {
@@ -207,6 +204,74 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
         )}
       </div>
       <InsightsPanel goal={goal} tasks={tasks} />
+    </div>
+  );
+}
+
+function Board({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
+  const qc = useQueryClient();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  );
+  async function onDragEnd(e: DragEndEvent) {
+    const status = e.over?.id as Task["status"] | undefined;
+    const task = tasks.find((t) => t.id === e.active.id);
+    if (!status || !task || task.status === status) return;
+    const key = ["tasks", goal.id];
+    const prev = qc.getQueryData<Task[]>(key);
+    const patch = { status, completed_at: status === "done" ? new Date().toISOString() : null };
+    qc.setQueryData<Task[]>(key, (old) => old?.map((t) => (t.id === task.id ? { ...t, ...patch } : t)));
+    const { error } = await supabase.from("tasks").update(patch).eq("id", task.id);
+    if (error) {
+      qc.setQueryData(key, prev);
+      toast.error("Could not move task. Please try again.");
+    }
+    qc.invalidateQueries({ queryKey: key });
+  }
+  return (
+    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
+        {columns.map((c) => {
+          const list = tasks.filter((t) => t.status === c.key);
+          return (
+            <Column key={c.key} id={c.key} label={c.label} count={list.length}>
+              {list.map((t) => (
+                <DraggableTask key={t.id} id={t.id}>
+                  <TaskCard task={t} participants={goal.participants} />
+                </DraggableTask>
+              ))}
+            </Column>
+          );
+        })}
+      </div>
+    </DndContext>
+  );
+}
+
+function Column({ id, label, count, children }: { id: string; label: string; count: number; children: ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className={cn("rounded-2xl border bg-panel/60 p-3 transition", isOver && "border-primary bg-primary/10")}>
+      <h3 className="mb-3 px-1 text-sm font-semibold tracking-wide uppercase">
+        {label} <span className="text-muted-foreground">({count})</span>
+      </h3>
+      <div className="min-h-16 space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function DraggableTask({ id, children }: { id: string; children: ReactNode }) {
+  const { setNodeRef, attributes, listeners, transform, isDragging } = useDraggable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
+      className={cn("cursor-grab touch-manipulation active:cursor-grabbing", isDragging && "relative z-50 opacity-80 shadow-2xl")}
+    >
+      {children}
     </div>
   );
 }
