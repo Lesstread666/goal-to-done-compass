@@ -1,3 +1,4 @@
+import { useUnread, markRead } from "@/lib/unread";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_authenticated/teams")({
 });
 
 function TeamsPage() {
+  const { counts: unread } = useUnread();
   const { chat } = Route.useSearch();
   const navigate = useNavigate({ from: "/teams" });
   const qc = useQueryClient();
@@ -74,7 +76,7 @@ function TeamsPage() {
                       </div>
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <Button size="sm" className="flex-1" onClick={() => open(c)}><MessageCircle /> Message</Button>
+                      <Button size="sm" className="flex-1" onClick={() => open(c)}><MessageCircle /> Message{unread[c.id] ? <span className="ml-1 rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">{unread[c.id]}</span> : null}</Button>
                       <Button size="sm" variant="outline" asChild><Link to="/u/$username" params={{ username: c.username }}>Profile</Link></Button>
                     </div>
                   </div>
@@ -96,6 +98,7 @@ function TeamsPage() {
 function ChatPanel({ partner, onClose }: { partner: Profile; onClose: () => void }) {
   const { data: me } = useQuery(meQuery());
   const [messages, setMessages] = useState<Message[]>([]);
+  const qc = useQueryClient();
   const [text, setText] = useState("");
   const end = useRef<HTMLDivElement>(null);
 
@@ -105,17 +108,19 @@ function ChatPanel({ partner, onClose }: { partner: Profile; onClose: () => void
     supabase.from("messages").select("*")
       .or(`and(sender_id.eq.${me.id},recipient_id.eq.${partner.id}),and(sender_id.eq.${partner.id},recipient_id.eq.${me.id})`)
       .order("created_at").limit(200)
-      .then(({ data }) => alive && setMessages((data ?? []) as Message[]));
+      .then(({ data }) => { if (alive) setMessages((data ?? []) as Message[]); });
+    void markRead(partner.id).then(() => qc.invalidateQueries({ queryKey: ["unread"] }));
     const channel = supabase
       .channel(`dm-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, ({ new: m }) => {
         const msg = m as Message;
         const ours = (msg.sender_id === me.id && msg.recipient_id === partner.id) || (msg.sender_id === partner.id && msg.recipient_id === me.id);
+        if (ours && msg.sender_id === partner.id) void markRead(partner.id).then(() => qc.invalidateQueries({ queryKey: ["unread"] }));
         if (ours) setMessages((prev) => (prev.some((x) => x.id === msg.id) ? prev : [...prev, msg]));
       })
       .subscribe();
     return () => { alive = false; supabase.removeChannel(channel); };
-  }, [me, partner.id]);
+  }, [me, partner.id, qc]);
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
