@@ -6,6 +6,7 @@ import { DeleteDialog } from "@/components/goal/DeleteDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { initials, isDelayed, type Task, type Participant } from "@/lib/goals";
 import { cn } from "@/lib/utils";
+import { autoReplan } from "@/lib/replan-apply";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const prio = {
@@ -22,7 +23,10 @@ export function TaskCard({ task, participants = [] }: { task: Task; participants
       const { error } = await supabase.from("tasks").update(patch).eq("id", task.id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks", task.goal_id] }),
+    onSuccess: async (_d, patch) => {
+      await qc.invalidateQueries({ queryKey: ["tasks", task.goal_id] });
+      if (patch.status === "done") await autoReplan(qc, task.goal_id);
+    },
     onError: () => toast.error("Could not update task. Please try again."),
   });
 

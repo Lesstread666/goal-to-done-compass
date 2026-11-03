@@ -15,6 +15,7 @@ import { DeleteDialog } from "@/components/goal/DeleteDialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { autoReplan } from "@/lib/replan-apply";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   validateSearch: z.object({ goal: z.string().optional() }),
@@ -226,8 +227,10 @@ function Board({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
     if (error) {
       qc.setQueryData(key, prev);
       toast.error("Could not move task. Please try again.");
+      return void qc.invalidateQueries({ queryKey: key });
     }
-    qc.invalidateQueries({ queryKey: key });
+    await qc.invalidateQueries({ queryKey: key });
+    if (status === "done") await autoReplan(qc, goal.id);
   }
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
