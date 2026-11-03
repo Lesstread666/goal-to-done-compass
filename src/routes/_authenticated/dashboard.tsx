@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { toast } from "sonner";
+import { DndContext, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { z } from "zod";
 import { ListChecks, LayoutGrid, LogOut, Search, Target, Users, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,7 +86,10 @@ function Dashboard() {
         {goal ? (
           <GoalView goal={goal} goals={goals} onSelect={select} />
         ) : (
-          <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+          <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+            <button onClick={() => supabase.auth.signOut()} className="absolute top-4 right-4 flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm hover:bg-muted md:hidden">
+              <LogOut className="h-4 w-4" /> Sign out
+            </button>
             <Target className="h-12 w-12 text-primary" />
             <h1 className="text-2xl font-bold">What big goal are you working on?</h1>
             <p className="max-w-sm text-muted-foreground">Create a goal project and let AI break it into small, doable tasks for you and your team.</p>
@@ -116,6 +121,12 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
   return (
     <div className="grid gap-6 p-4 md:p-8 xl:grid-cols-[1fr_300px]">
       <div className="min-w-0">
+        <div className="mb-3 flex items-center justify-between md:hidden">
+          <span className="flex items-center gap-2 font-semibold text-primary"><ListChecks className="h-5 w-5" /> Ticklist</span>
+          <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm hover:bg-muted">
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+        </div>
         <div className="text-sm text-muted-foreground">Goal projects › <span className="text-foreground">{goal.title}</span></div>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -168,21 +179,7 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
         {isLoading ? (
           <p className="mt-8 text-muted-foreground">Loading tasks…</p>
         ) : view === "board" ? (
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            {columns.map((c) => {
-              const list = filtered.filter((t) => t.status === c.key);
-              return (
-                <div key={c.key} className="rounded-2xl border bg-panel/60 p-3">
-                  <h3 className="mb-3 px-1 text-sm font-semibold tracking-wide uppercase">
-                    {c.label} <span className="text-muted-foreground">({list.length})</span>
-                  </h3>
-                  <div className="space-y-3">
-                    {list.map((t) => <TaskCard key={t.id} task={t} participants={goal.participants} />)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <Board goal={goal} tasks={filtered} />
         ) : (
           <div className="mt-5 space-y-4">
             {goal.participants.map((p) => {
