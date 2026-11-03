@@ -15,6 +15,8 @@ export function InvitesBanner({ onJoined }: { onJoined?: (goalId: string) => voi
       if (error) return void toast.error("Could not join that project.");
       toast.success("You're in! The project is now on your dashboard.");
       await qc.invalidateQueries({ queryKey: ["goals"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["goal-people"] });
       onJoined?.(data as string);
     } else {
       await supabase.from("goal_invites").update({ status: "declined" }).eq("id", id);
