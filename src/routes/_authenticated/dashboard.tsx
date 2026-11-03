@@ -90,15 +90,6 @@ function Dashboard() {
   );
 }
 
-function NavIcon({ icon: Icon, label, active }: { icon: typeof Users; label: string; active?: boolean }) {
-  return (
-    <div className={cn("flex w-full flex-col items-center gap-1 border-l-2 py-3 text-xs", active ? "border-primary bg-sidebar-accent text-sidebar-accent-foreground" : "border-transparent text-sidebar-foreground")}>
-      <Icon className="h-5 w-5" />
-      {label}
-    </div>
-  );
-}
-
 function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSelect: (id: string) => void }) {
   const qc = useQueryClient();
   const { data: tasks = [], isLoading } = useQuery(tasksQuery(goal.id));
