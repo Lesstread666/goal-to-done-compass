@@ -10,7 +10,10 @@ export function UserSearch({ action, placeholder = "Search by username" }: { act
   const [me, setMe] = useState<string | null>(null);
   useEffect(() => void currentUserId().then(setMe), []);
   useEffect(() => {
-    if (!term.trim()) return setResults([]);
+    if (!term.trim()) {
+      setResults([]);
+      return;
+    }
     const t = setTimeout(() => searchProfiles(term, me).then(setResults).catch(() => setResults([])), 250);
     return () => clearTimeout(t);
   }, [term, me]);
