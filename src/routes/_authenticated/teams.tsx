@@ -117,7 +117,9 @@ function ChatPanel({ partner, onClose }: { partner: Profile; onClose: () => void
     return () => { alive = false; supabase.removeChannel(channel); };
   }, [me, partner.id]);
 
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [messages.length]);
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "end" });
+  }, [messages.length]);
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
