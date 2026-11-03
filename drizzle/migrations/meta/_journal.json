@@ -8,6 +8,13 @@
       "when": 1793703833832,
       "tag": "0000_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793706691604,
+      "tag": "0001_edit_goal_team_atomically",
+      "breakpoints": true
     }
   ]
 }
