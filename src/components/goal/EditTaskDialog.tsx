@@ -11,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
-export function EditTaskDialog({ task, participants }: { task: Task; participants: Participant[] }) {
+export function EditTaskDialog({ task, participants }: { task: Task; participants?: Participant[] | null }) {
+  const team = participants ?? [];
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(task);
   const qc = useQueryClient();
@@ -36,7 +37,7 @@ export function EditTaskDialog({ task, participants }: { task: Task; participant
             <div className="space-y-1.5"><Label>Priority</Label><Select value={draft.priority} onValueChange={(v) => setDraft({ ...draft, priority: v as Task["priority"] })}><SelectTrigger aria-label="Priority"><SelectValue /></SelectTrigger><SelectContent>{["high", "medium", "low"].map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
             <div className="space-y-1.5"><Label>Status</Label><Select value={draft.status} onValueChange={(v) => setDraft({ ...draft, status: v as Task["status"] })}><SelectTrigger aria-label="Status"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todo">To do</SelectItem><SelectItem value="in_progress">In progress</SelectItem><SelectItem value="done">Done</SelectItem></SelectContent></Select></div>
           </div>
-          <div className="space-y-1.5"><Label>Assignee</Label><Select value={draft.assignee ?? "__none"} onValueChange={(v) => setDraft({ ...draft, assignee: v === "__none" ? null : v })}><SelectTrigger aria-label="Assignee"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="__none">Unassigned</SelectItem>{participants.map((p) => <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>)}</SelectContent></Select></div>
+          <div className="space-y-1.5"><Label>Assignee</Label><Select value={draft.assignee ?? "__none"} onValueChange={(v) => setDraft({ ...draft, assignee: v === "__none" ? null : v })}><SelectTrigger aria-label="Assignee"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="__none">Unassigned</SelectItem>{team.map((p) => <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>)}</SelectContent></Select></div>
           <div className="flex justify-end gap-2"><Button variant="outline" type="button" disabled={save.isPending} onClick={() => setOpen(false)}>Cancel</Button><Button disabled={save.isPending || !draft.title.trim()} type="submit">{save.isPending ? "Saving…" : "Save task"}</Button></div>
         </form>
       </DialogContent>

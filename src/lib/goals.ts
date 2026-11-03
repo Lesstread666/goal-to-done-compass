@@ -37,7 +37,7 @@ export const goalsQuery = () =>
     queryFn: async () => {
       const { data, error } = await supabase.from("goals").select("*").order("created_at", { ascending: false });
       if (error) throw error;
-      return data as unknown as Goal[];
+      return ((data ?? []) as unknown as Goal[]).map((goal) => ({ ...goal, participants: Array.isArray(goal.participants) ? goal.participants : [] }));
     },
   });
 

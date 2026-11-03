@@ -14,7 +14,7 @@ const prio = {
   low: "bg-accent text-accent-foreground",
 };
 
-export function TaskCard({ task, participants }: { task: Task; participants: Participant[] }) {
+export function TaskCard({ task, participants = [] }: { task: Task; participants?: Participant[] | null }) {
   const qc = useQueryClient();
   const delayed = isDelayed(task);
   const update = useMutation({
