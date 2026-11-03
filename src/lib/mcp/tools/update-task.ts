@@ -24,7 +24,7 @@ export default defineTool({
       const people = (task.goals as { participants?: { name?: string }[] } | null)?.participants ?? [];
       if (!people.some((p) => p?.name === assignee)) throw new ToolError(`'${assignee}' is not a participant of this goal`);
     }
-    const patch: Record<string, string | null> = {};
+    const patch: { status?: string; completed_at?: string | null; priority?: string; deadline?: string; assignee?: string } = {};
     if (status) {
       patch.status = status;
       patch.completed_at = status === "done" ? new Date().toISOString() : null;
