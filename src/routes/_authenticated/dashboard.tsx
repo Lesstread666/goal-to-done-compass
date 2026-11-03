@@ -207,3 +207,71 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
     </div>
   );
 }
+
+function Board({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
+  const qc = useQueryClient();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  );
+  async function onDragEnd(e: DragEndEvent) {
+    const status = e.over?.id as Task["status"] | undefined;
+    const task = tasks.find((t) => t.id === e.active.id);
+    if (!status || !task || task.status === status) return;
+    const key = ["tasks", goal.id];
+    const prev = qc.getQueryData<Task[]>(key);
+    const patch = { status, completed_at: status === "done" ? new Date().toISOString() : null };
+    qc.setQueryData<Task[]>(key, (old) => old?.map((t) => (t.id === task.id ? { ...t, ...patch } : t)));
+    const { error } = await supabase.from("tasks").update(patch).eq("id", task.id);
+    if (error) {
+      qc.setQueryData(key, prev);
+      toast.error("Could not move task. Please try again.");
+    }
+    qc.invalidateQueries({ queryKey: key });
+  }
+  return (
+    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
+        {columns.map((c) => {
+          const list = tasks.filter((t) => t.status === c.key);
+          return (
+            <Column key={c.key} id={c.key} label={c.label} count={list.length}>
+              {list.map((t) => (
+                <DraggableTask key={t.id} id={t.id}>
+                  <TaskCard task={t} participants={goal.participants} />
+                </DraggableTask>
+              ))}
+            </Column>
+          );
+        })}
+      </div>
+    </DndContext>
+  );
+}
+
+function Column({ id, label, count, children }: { id: string; label: string; count: number; children: ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className={cn("rounded-2xl border bg-panel/60 p-3 transition", isOver && "border-primary bg-primary/10")}>
+      <h3 className="mb-3 px-1 text-sm font-semibold tracking-wide uppercase">
+        {label} <span className="text-muted-foreground">({count})</span>
+      </h3>
+      <div className="min-h-16 space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function DraggableTask({ id, children }: { id: string; children: ReactNode }) {
+  const { setNodeRef, attributes, listeners, transform, isDragging } = useDraggable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
+      className={cn("cursor-grab touch-manipulation active:cursor-grabbing", isDragging && "relative z-50 opacity-80 shadow-2xl")}
+    >
+      {children}
+    </div>
+  );
+}
