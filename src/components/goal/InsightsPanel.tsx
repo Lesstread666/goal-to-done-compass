@@ -1,4 +1,4 @@
-import { Area, AreaChart, CartesianGrid, Line, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, ComposedChart, CartesianGrid, Line, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { initials, isDelayed, type Goal, type Task } from "@/lib/goals";
 
 function lastDays(n: number) {
@@ -89,7 +89,7 @@ export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
         <p className="text-xs text-muted-foreground">Tasks completed vs. overdue, last 7 days</p>
         <div className="mt-3 h-40">
           <ResponsiveContainer>
-            <AreaChart data={activity} margin={{ left: -24, right: 4, top: 4 }}>
+            <ComposedChart data={activity} margin={{ left: -24, right: 4, top: 4 }}>
               <defs>
                 <linearGradient id="fillDone" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.5} />
@@ -102,7 +102,7 @@ export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
               <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
               <Area type="monotone" dataKey="completed" name="Completed" stroke="var(--chart-1)" strokeWidth={2} fill="url(#fillDone)" />
               <Line type="monotone" dataKey="delayed" name="Overdue" stroke="var(--chart-3)" strokeWidth={2} dot={false} />
-            </AreaChart>
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
         <div className="mt-2 flex gap-4 text-[11px] text-muted-foreground">
