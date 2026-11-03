@@ -5,9 +5,9 @@ import { ArrowRight, Footprints } from "lucide-react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Stepwise — Turn big goals into small tasks" },
+      { title: "Ticklist — Turn big goals into small tasks" },
       { name: "description", content: "Enter a goal. AI breaks it into prioritized tasks, assigns roles and tracks your team's progress." },
-      { property: "og:title", content: "Stepwise — Turn big goals into small tasks" },
+      { property: "og:title", content: "Ticklist — Turn big goals into small tasks" },
       { property: "og:description", content: "Enter a goal. AI breaks it into prioritized tasks, assigns roles and tracks your team's progress." },
     ],
   }),
@@ -24,7 +24,7 @@ function Index() {
         Big goal? <span className="text-primary">Take it step by step.</span>
       </h1>
       <p className="mt-5 max-w-lg text-muted-foreground">
-        Describe what you want to achieve. Stepwise breaks it into small tasks with priorities, roles and deadlines — and
+        Describe what you want to achieve. Ticklist breaks it into small tasks with priorities, roles and deadlines — and
         flags anything that falls behind.
       </p>
       <Button asChild size="lg" className="mt-8 glow">

@@ -16,9 +16,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   validateSearch: z.object({ goal: z.string().optional() }),
   head: () => ({
     meta: [
-      { title: "Dashboard — Stepwise" },
+      { title: "Dashboard — Ticklist" },
       { name: "description", content: "Your goal projects, tasks and team progress." },
-      { property: "og:title", content: "Dashboard — Stepwise" },
+      { property: "og:title", content: "Dashboard — Ticklist" },
       { property: "og:description", content: "Your goal projects, tasks and team progress." },
     ],
   }),

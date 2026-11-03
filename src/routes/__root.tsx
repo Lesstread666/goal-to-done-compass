@@ -61,7 +61,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Stepwise — Turn big goals into small tasks" },
+      { title: "Ticklist — Turn big goals into small tasks" },
       { name: "description", content: "AI breaks big goals into actionable tasks with deadlines, roles and progress tracking." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
