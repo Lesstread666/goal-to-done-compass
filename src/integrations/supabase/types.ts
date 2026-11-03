@@ -113,6 +113,7 @@ export type Database = {
           body: string
           created_at: string
           id: string
+          read_at: string | null
           recipient_id: string
           sender_id: string
         }
@@ -120,6 +121,7 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
+          read_at?: string | null
           recipient_id: string
           sender_id?: string
         }
@@ -127,6 +129,7 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
+          read_at?: string | null
           recipient_id?: string
           sender_id?: string
         }
@@ -253,6 +256,7 @@ export type Database = {
         Returns: undefined
       }
       is_goal_member: { Args: { p_goal_id: string }; Returns: boolean }
+      mark_messages_read: { Args: { p_sender: string }; Returns: undefined }
       my_pending_invites: {
         Args: never
         Returns: {
