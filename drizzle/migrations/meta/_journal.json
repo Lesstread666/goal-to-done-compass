@@ -36,6 +36,13 @@
       "when": 1793723808003,
       "tag": "0004_messages_read_at",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793724607069,
+      "tag": "0005_rebalance_on_accept",
+      "breakpoints": true
     }
   ]
 }
