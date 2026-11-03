@@ -1,4 +1,4 @@
-# Goal to Done
+# Ticklist
 
 Our task is to build a fullstack application using AI. This is the idea and the basic features of the application we want to build : The idea: An application for people who struggle to turn large, overwhelming goals into manageable tasks. 
 
