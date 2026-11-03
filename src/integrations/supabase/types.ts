@@ -14,6 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      goal_invites: {
+        Row: {
+          created_at: string
+          goal_id: string
+          id: string
+          invitee_id: string
+          inviter_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          goal_id: string
+          id?: string
+          invitee_id: string
+          inviter_id?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string
+          id?: string
+          invitee_id?: string
+          inviter_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_invites_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goal_members: {
+        Row: {
+          created_at: string
+          goal_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          goal_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_members_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goals: {
         Row: {
           created_at: string
@@ -41,6 +105,54 @@ export type Database = {
           participants?: Json
           title?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          recipient_id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          recipient_id: string
+          sender_id?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          recipient_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string
+          created_at: string
+          id: string
+          username: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string
+          created_at?: string
+          id: string
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string
+          created_at?: string
+          id?: string
+          username?: string
         }
         Relationships: []
       }
@@ -97,11 +209,38 @@ export type Database = {
           },
         ]
       }
+      team_contacts: {
+        Row: {
+          contact_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          user_id?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_contacts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      accept_goal_invite: { Args: { p_invite_id: string }; Returns: string }
       edit_goal_team: {
         Args: {
           p_assignments: Json
@@ -113,6 +252,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      is_goal_member: { Args: { p_goal_id: string }; Returns: boolean }
+      my_pending_invites: {
+        Args: never
+        Returns: {
+          created_at: string
+          goal_id: string
+          goal_title: string
+          id: string
+          inviter_avatar: string
+          inviter_username: string
+        }[]
+      }
+      username_available: { Args: { p_username: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

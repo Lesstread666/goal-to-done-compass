@@ -4,7 +4,10 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { DndContext, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { z } from "zod";
-import { ListChecks, LayoutGrid, LogOut, Search, Target, Users, AlertTriangle } from "lucide-react";
+import { ListChecks, Search, Target, AlertTriangle } from "lucide-react";
+import { AppNav } from "@/components/social/AppNav";
+import { InvitesBanner } from "@/components/social/InvitesBanner";
+import { InviteDialog } from "@/components/goal/InviteDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { goalsQuery, tasksQuery, isDelayed, initials, type Task, type Goal } from "@/lib/goals";
 import { CreateGoalDialog } from "@/components/goal/CreateGoalDialog";
@@ -47,21 +50,8 @@ function Dashboard() {
   const select = (id: string) => navigate({ search: { goal: id } });
 
   return (
-    <div className="flex min-h-screen">
-      <nav className="hidden w-20 flex-col items-center gap-2 border-r bg-sidebar py-6 md:flex">
-        <div className="mb-6 text-primary">
-          <ListChecks className="h-7 w-7" />
-        </div>
-        <NavIcon icon={LayoutGrid} label="Dashboard" active />
-        <div className="mt-auto">
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="flex flex-col items-center gap-1 text-xs text-sidebar-foreground hover:text-foreground"
-          >
-            <LogOut className="h-5 w-5" /> Sign out
-          </button>
-        </div>
-      </nav>
+    <div className="flex min-h-screen pb-20 md:pb-0">
+      <AppNav />
 
       <aside className="hidden w-60 shrink-0 border-r bg-panel p-4 lg:block">
         <h2 className="mb-3 px-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">Goal projects</h2>
@@ -88,9 +78,7 @@ function Dashboard() {
           <GoalView goal={goal} goals={goals} onSelect={select} />
         ) : (
           <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-            <button onClick={() => supabase.auth.signOut()} className="absolute top-4 right-4 flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm hover:bg-muted md:hidden">
-              <LogOut className="h-4 w-4" /> Sign out
-            </button>
+            <div className="w-full max-w-xl"><InvitesBanner onJoined={select} /></div>
             <Target className="h-12 w-12 text-primary" />
             <h1 className="text-2xl font-bold">What big goal are you working on?</h1>
             <p className="max-w-sm text-muted-foreground">Create a goal project and let AI break it into small, doable tasks for you and your team.</p>
@@ -98,15 +86,6 @@ function Dashboard() {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function NavIcon({ icon: Icon, label, active }: { icon: typeof Users; label: string; active?: boolean }) {
-  return (
-    <div className={cn("flex w-full flex-col items-center gap-1 border-l-2 py-3 text-xs", active ? "border-primary bg-sidebar-accent text-sidebar-accent-foreground" : "border-transparent text-sidebar-foreground")}>
-      <Icon className="h-5 w-5" />
-      {label}
     </div>
   );
 }
@@ -124,10 +103,8 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
       <div className="min-w-0">
         <div className="mb-3 flex items-center justify-between md:hidden">
           <span className="flex items-center gap-2 font-semibold text-primary"><ListChecks className="h-5 w-5" /> Ticklist</span>
-          <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm hover:bg-muted">
-            <LogOut className="h-4 w-4" /> Sign out
-          </button>
         </div>
+        <div className="mb-4"><InvitesBanner onJoined={onSelect} /></div>
         <div className="text-sm text-muted-foreground">Goal projects › <span className="text-foreground">{goal.title}</span></div>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -135,6 +112,7 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
             {goal.deadline && <p className="mt-1 text-sm text-muted-foreground">Deadline {new Date(goal.deadline).toLocaleDateString()}</p>}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <InviteDialog goal={goal} />
             <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} />
             <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} onDelete={async () => {
               const { error } = await supabase.from("goals").delete().eq("id", goal.id).select("id").single();

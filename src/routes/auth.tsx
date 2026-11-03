@@ -6,6 +6,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { isValidUsername, normalizeUsername } from "@/lib/social";
 import { oauthReturnPath } from "@/lib/oauth-return-path";
 
 export const Route = createFileRoute("/auth")({
@@ -31,6 +32,7 @@ function AuthPage() {
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -46,11 +48,17 @@ function AuthPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    const uname = normalizeUsername(username);
+    if (mode === "up") {
+      if (!isValidUsername(uname)) return void toast.error("Usernames are 3–20 characters: letters, numbers or _.");
+      const { data: free } = await supabase.rpc("username_available", { p_username: uname });
+      if (free === false) return void toast.error(`@${uname} is taken — try another.`);
+    }
     setBusy(true);
     const { data, error } =
       mode === "in"
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: new URL(target, window.location.origin).href } });
+        : await supabase.auth.signUp({ email, password, options: { data: { username: uname }, emailRedirectTo: new URL(target, window.location.origin).href } });
     setBusy(false);
     if (error) {
       toast.error(error.message);
@@ -74,6 +82,13 @@ function AuthPage() {
         </Button>
         <div className="my-5 text-center text-xs text-muted-foreground">or</div>
         <form onSubmit={submit} className="space-y-4">
+          {mode === "up" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="username">Username</Label>
+              <Input id="username" required placeholder="e.g. ana_builds" value={username} onChange={(e) => setUsername(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Teammates find you by this.</p>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
