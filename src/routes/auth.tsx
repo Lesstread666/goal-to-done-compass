@@ -6,6 +6,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { oauthReturnPath } from "@/lib/oauth-return-path";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -18,11 +19,15 @@ export const Route = createFileRoute("/auth")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { next?: string } => (typeof s["next"] === "string" ? { next: s["next"] } : {}),
   component: AuthPage,
 });
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const target = next ? oauthReturnPath(next) : "/dashboard";
+  const go = () => (target === "/dashboard" ? navigate({ to: "/dashboard" }) : navigate({ href: target }));
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,13 +35,14 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard" });
+      if (data.session) go();
     });
     const { data } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (s) navigate({ to: "/dashboard" });
+      if (s) go();
     });
     return () => data.subscription.unsubscribe();
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,7 +50,7 @@ function AuthPage() {
     const { data, error } =
       mode === "in"
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + "/dashboard" } });
+        : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: new URL(target, window.location.origin).href } });
     setBusy(false);
     if (error) {
       toast.error(error.message);
@@ -54,7 +60,7 @@ function AuthPage() {
   }
 
   async function google() {
-    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/auth" });
+    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: next ? new URL(`/auth?next=${encodeURIComponent(target)}`, window.location.origin).href : window.location.origin + "/auth" });
     if (r.error) toast.error(String(r.error.message ?? r.error));
   }
 
