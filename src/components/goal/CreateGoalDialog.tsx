@@ -1,4 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { addContact, meQuery, searchProfiles, type Profile } from "@/lib/social";
+import { UserAvatar } from "@/components/social/UserAvatar";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Wand2 } from "lucide-react";
@@ -17,12 +21,24 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
   const [deadline, setDeadline] = useState("");
   const [count, setCount] = useState(1);
   const [names, setNames] = useState<string[]>(["Me"]);
+  const [picked, setPicked] = useState<(Profile | null)[]>([null]);
+  const { data: me } = useQuery(meQuery());
+  useEffect(() => {
+    if (me) setNames((prev) => (prev[0] === "Me" ? [me.username, ...prev.slice(1)] : prev));
+  }, [me]);
   const qc = useQueryClient();
   const create = useServerFn(createGoalPlan);
 
   const m = useMutation({
     mutationFn: create,
-    onSuccess: ({ goalId }) => {
+    onSuccess: async ({ goalId }) => {
+      const invitees = picked.filter((p): p is Profile => !!p && p.id !== me?.id);
+      for (const p of invitees) {
+        const { error } = await supabase.from("goal_invites").insert({ goal_id: goalId, invitee_id: p.id });
+        if (!error) await addContact(p.id).catch(() => {});
+      }
+      if (invitees.length) toast.success(`Invites sent to ${invitees.map((p) => "@" + p.username).join(", ")}`);
+      setPicked([null]);
       qc.invalidateQueries({ queryKey: ["goals"] });
       toast.success("Your plan is ready");
       setOpen(false);
@@ -37,7 +53,8 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
   function setParticipantCount(n: number) {
     const c = Math.max(1, Math.min(12, n || 1));
     setCount(c);
-    setNames((prev) => Array.from({ length: c }, (_, i) => prev[i] ?? `Teammate ${i + 1}`));
+    setNames((prev) => Array.from({ length: c }, (_, i) => prev[i] ?? ""));
+    setPicked((prev) => Array.from({ length: c }, (_, i) => prev[i] ?? null));
   }
 
   return (
@@ -56,7 +73,7 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            m.mutate({ data: { title, description, deadline, participants: names.map((n) => n.trim() || "Teammate") } });
+            m.mutate({ data: { title, description, deadline, participants: names.map((n, i) => n.trim() || `Teammate ${i + 1}`) } });
           }}
         >
           <div className="space-y-1.5">
@@ -78,10 +95,25 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Participant names</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <Label>Participants</Label>
+            <p className="text-xs text-muted-foreground">Type a username to pick a Ticklist user — they get an invite and keep the tasks assigned to them.</p>
+            <div className="grid gap-2 sm:grid-cols-2">
               {names.map((n, i) => (
-                <Input key={i} aria-label={`Participant ${i + 1}`} value={n} onChange={(e) => setNames(names.map((x, j) => (j === i ? e.target.value : x)))} />
+                <ParticipantField
+                  key={i}
+                  index={i}
+                  value={n}
+                  picked={picked[i] ?? null}
+                  excludeIds={[me?.id, ...picked.filter((_, j) => j !== i).map((p) => p?.id)].filter(Boolean) as string[]}
+                  onChange={(v) => {
+                    setNames(names.map((x, j) => (j === i ? v : x)));
+                    setPicked(picked.map((x, j) => (j === i ? null : x)));
+                  }}
+                  onPick={(p) => {
+                    setNames(names.map((x, j) => (j === i ? p.username : x)));
+                    setPicked(picked.map((x, j) => (j === i ? p : x)));
+                  }}
+                />
               ))}
             </div>
           </div>
@@ -92,5 +124,49 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ParticipantField({ index, value, picked, excludeIds, onChange, onPick }: {
+  index: number; value: string; picked: Profile | null; excludeIds: string[];
+  onChange: (v: string) => void; onPick: (p: Profile) => void;
+}) {
+  const [results, setResults] = useState<Profile[]>([]);
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    if (picked || !value.trim() || index === 0) {
+      setResults([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      searchProfiles(value).then((r) => setResults(r.filter((p) => !excludeIds.includes(p.id)))).catch(() => setResults([]));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [value, picked, index, excludeIds.join()]);
+  return (
+    <div className="relative">
+      <Input
+        aria-label={`Participant ${index + 1}`}
+        placeholder={index === 0 ? "You" : "Search username or type a name"}
+        value={value}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        onChange={(e) => onChange(e.target.value)}
+        className={picked ? "border-primary pr-16" : undefined}
+      />
+      {picked && <span className="absolute top-1/2 right-2 -translate-y-1/2 text-[10px] font-semibold text-primary uppercase">Invite</span>}
+      {focused && results.length > 0 && (
+        <ul className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border bg-popover shadow-lg">
+          {results.map((p) => (
+            <li key={p.id}>
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(p); setResults([]); }} className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-muted">
+                <UserAvatar username={p.username} url={p.avatar_url} className="h-6 w-6" />
+                @{p.username}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
