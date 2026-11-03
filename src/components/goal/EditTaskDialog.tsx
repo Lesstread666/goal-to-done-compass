@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
-export function EditTaskDialog({ task, participants }: { task: Task; participants?: Participant[] | null }) {
+export function EditTaskDialog({ task, participants }: { task: Task; participants?: Participant[] | null | undefined }) {
   const team = participants ?? [];
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(task);
