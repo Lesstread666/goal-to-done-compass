@@ -1,4 +1,4 @@
 # Requested updates
-- [ ] Edit and delete goals and tasks, with deletion confirmation.
-- [ ] Add/remove participants and review/reassign tasks atomically.
-- [ ] Verify persisted changes and assignment rules.
+- [x] Edit and delete goals and tasks, with deletion confirmation.
+- [x] Add/remove participants and review/reassign tasks atomically.
+- [x] Verify persisted changes and assignment rules.
