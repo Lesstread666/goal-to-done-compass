@@ -29,6 +29,13 @@
       "when": 1793723509085,
       "tag": "0003_goals_owner_select",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793723808003,
+      "tag": "0004_messages_read_at",
+      "breakpoints": true
     }
   ]
 }
