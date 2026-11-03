@@ -21,26 +21,30 @@ export function EditGoalDialog({ goal, tasks, loading }: { goal: Goal; tasks: Ta
   const [assignments, setAssignments] = useState<Record<string, string | null>>({});
   const qc = useQueryClient();
   const names = participants.map((p) => p.name.trim());
-  const valid = !!title.trim() && participants.length > 0 && names.every(Boolean) && new Set(names.map((n) => n.toLowerCase())).size === names.length;
+  const valid = !!title.trim() && !!deadline && participants.length > 0 && names.every(Boolean) && new Set(names.map((n) => n.toLowerCase())).size === names.length;
   const save = useMutation({
     mutationFn: async () => {
       const team = participants.map((p) => ({ name: p.name.trim(), role: p.role.trim() }));
       const allowed = new Set(team.map((p) => p.name));
       const clean = Object.fromEntries(tasks.map((t) => [t.id, assignments[t.id] && allowed.has(assignments[t.id] as string) ? assignments[t.id] : null]));
-      const { error } = await supabase.rpc("edit_goal_team", { p_goal_id: goal.id, p_title: title, p_description: description, p_deadline: deadline || null, p_participants: team, p_assignments: clean });
+      const { error } = await supabase.rpc("edit_goal_team", { p_goal_id: goal.id, p_title: title, p_description: description, p_deadline: deadline, p_participants: team, p_assignments: clean });
       if (error) throw error;
     },
     onSuccess: async () => { await Promise.all([qc.invalidateQueries({ queryKey: ["goals"] }), qc.invalidateQueries({ queryKey: ["tasks", goal.id] })]); setOpen(false); toast.success("Project updated"); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save project. Reopen the editor and try again."),
   });
   function editParticipant(index: number, patch: Partial<Participant>) {
-    const old = participants[index].name;
+    const participant = participants[index];
+    if (!participant) return;
+    const old = participant.name;
     const next = participants.map((p, i) => i === index ? { ...p, ...patch } : p);
     if (patch.name !== undefined) setAssignments((prev) => Object.fromEntries(Object.entries(prev).map(([id, name]) => [id, name === old ? patch.name || null : name])));
     setParticipants(next);
   }
   function removeParticipant(index: number) {
-    const name = participants[index].name;
+    const participant = participants[index];
+    if (!participant) return;
+    const name = participant.name;
     setParticipants(participants.filter((_, i) => i !== index));
     setAssignments((prev) => Object.fromEntries(Object.entries(prev).map(([id, assignee]) => [id, assignee === name ? null : assignee])));
   }
@@ -52,7 +56,7 @@ export function EditGoalDialog({ goal, tasks, loading }: { goal: Goal; tasks: Ta
         <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate(); }}>
           <div className="space-y-1.5"><Label htmlFor="edit-goal-title">Goal</Label><Input id="edit-goal-title" required value={title} onChange={(e) => setTitle(e.target.value)} /></div>
           <div className="space-y-1.5"><Label htmlFor="edit-goal-description">Description</Label><Textarea id="edit-goal-description" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label htmlFor="edit-goal-date">Deadline</Label><Input id="edit-goal-date" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor="edit-goal-date">Deadline</Label><Input id="edit-goal-date" required type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} /></div>
           <section className="space-y-3 border-t pt-4">
             <div className="flex items-center justify-between"><h3 className="font-semibold">Participants</h3><Button type="button" size="sm" variant="outline" onClick={() => setParticipants([...participants, { name: "", role: "" }])}><Plus className="h-4 w-4" />Add participant</Button></div>
             {participants.map((p, i) => <div key={i} className="flex items-start gap-2"><div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2"><Input required aria-label={`Participant ${i + 1} name`} placeholder="Name" value={p.name} onChange={(e) => editParticipant(i, { name: e.target.value })} /><Input aria-label={`Participant ${i + 1} role`} placeholder="Role" value={p.role} onChange={(e) => editParticipant(i, { role: e.target.value })} /></div><Button type="button" size="icon" variant="ghost" disabled={participants.length === 1} aria-label={`Remove participant ${i + 1}`} title="Remove participant" className="text-destructive" onClick={() => removeParticipant(i)}><Trash2 className="h-4 w-4" /></Button></div>)}

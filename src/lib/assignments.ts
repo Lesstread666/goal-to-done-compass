@@ -11,7 +11,9 @@ export function balanceAssignments(tasks: Task[], participants: Participant[], c
   let i = 0;
   for (const task of tasks) {
     if (task.status === "done") continue;
-    result[task.id] = participants[i % participants.length].name;
+    const participant = participants[i % participants.length];
+    if (!participant) continue;
+    result[task.id] = participant.name;
     i++;
   }
   return result;
