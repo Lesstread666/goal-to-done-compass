@@ -1,0 +1,1 @@
+CREATE POLICY "owners read own goals" ON public.goals FOR SELECT TO authenticated USING (user_id = auth.uid());
