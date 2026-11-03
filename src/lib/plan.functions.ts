@@ -93,7 +93,7 @@ export const createGoalPlan = createServerFn({ method: "POST" })
       title: t.title,
       description: t.description,
       priority: ["high", "medium", "low"].includes(t.priority) ? t.priority : "medium",
-      assignee: data.participants.includes(t.assignee) ? t.assignee : data.participants[i % data.participants.length],
+      assignee: data.participants.includes(t.assignee) ? t.assignee : (data.participants[i % data.participants.length] ?? null),
       deadline: valid.test(t.deadline) ? t.deadline : data.deadline,
       position: i,
     }));
