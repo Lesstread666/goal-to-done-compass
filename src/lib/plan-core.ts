@@ -6,7 +6,46 @@ export const PlanInput = z.object({
   description: z.string().max(2000),
   deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   participants: z.array(z.string().min(1).max(60)).min(1).max(12),
+  /** Confirmed project understanding from the Goal Clarifier. */
+  context: z.string().max(8000).optional(),
 });
+
+export const ClarifyInput = z.object({
+  title: z.string().min(2).max(200),
+  description: z.string().max(2000),
+  deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  participants: z.array(z.string().min(1).max(60)).min(1).max(12),
+  messages: z.array(z.object({ role: z.enum(["assistant", "user"]), content: z.string().max(4000) })).max(40),
+});
+
+const clarifySchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["ready", "message", "questions", "summary"],
+  properties: {
+    ready: { type: "boolean", description: "True when enough is known to plan well." },
+    message: { type: "string", description: "Short consultant-style reply: acknowledge, recommend, or explain." },
+    questions: { type: "array", items: { type: "string" }, description: "2-3 most important open questions; empty when ready." },
+    summary: { type: "string", description: "Organized project understanding so far: outcome, success criteria, scope, resources, constraints, risks, assumptions. Plain text bullets." },
+  },
+} as const;
+
+const CLARIFY_INSTRUCTIONS =
+  "You are a project planning consultant helping someone define ANY kind of goal before a task plan is generated. Do not use fixed categories or questionnaires: decide dynamically what matters for this specific goal. Evaluate the desired outcome, what success looks like, known vs missing requirements, resources/skills/participants, constraints, deadline realism, dependencies and risks, and whether the user needs guidance. If information is sufficient, set ready=true and ask nothing. Otherwise ask only the 2-3 most important questions per round, building on earlier answers; never repeat answered questions. When the user is unsure, offer concrete recommendations or options. Stop asking once further answers would not materially change the plan (usually 1-4 rounds). Always keep summary up to date.";
+
+export type ClarifyResult = { ready: boolean; message: string; questions: string[]; summary: string };
+
+export async function clarifyGoal(data: z.infer<typeof ClarifyInput>): Promise<ClarifyResult> {
+  const today = new Date().toISOString().slice(0, 10);
+  const convo = data.messages.map((m) => `${m.role === "user" ? "User" : "Consultant"}: ${m.content}`).join("\n");
+  const text = await generateJson(
+    CLARIFY_INSTRUCTIONS,
+    clarifySchema,
+    "clarify",
+    `Today: ${today}\nGoal: ${data.title}\nDescription: ${data.description || "(none)"}\nDeadline: ${data.deadline}\nParticipants: ${data.participants.join(", ")}\n\nConversation so far:\n${convo || "(none yet)"}`,
+  );
+  return JSON.parse(text) as ClarifyResult;
+}
 
 const schema = {
   type: "object",
@@ -63,15 +102,19 @@ function extractText(output: unknown): string {
 }
 
 async function generatePlanText(input: string): Promise<string> {
+  return generateJson(INSTRUCTIONS, schema, "plan", input);
+}
+
+async function generateJson(instructions: string, schema: Record<string, unknown>, name: string, input: string): Promise<string> {
   // Lovable hosting injects LOVABLE_API_KEY automatically; self-hosted
   // deployments (e.g. Vercel) fall back to a direct OpenAI call.
   if (process.env["LOVABLE_API_KEY"]) {
     const { generateResponse } = await import("@lovable.dev/ai-gateway");
     const res = await generateResponse({
       model: "openai/gpt-6-astra",
-      instructions: INSTRUCTIONS,
+      instructions,
       input,
-      text: { format: { type: "json_schema", name: "plan", strict: true, schema } },
+      text: { format: { type: "json_schema", name, strict: true, schema } },
     });
     return extractText(res.output);
   }
@@ -87,9 +130,9 @@ async function generatePlanText(input: string): Promise<string> {
     headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: "gpt-4.1",
-      instructions: INSTRUCTIONS,
+      instructions,
       input,
-      text: { format: { type: "json_schema", name: "plan", strict: true, schema } },
+      text: { format: { type: "json_schema", name, strict: true, schema } },
     }),
   });
   if (!r.ok) throw new Error(`OpenAI request failed (${r.status}): ${(await r.text()).slice(0, 300)}`);
@@ -105,7 +148,7 @@ export async function generateAndSavePlan(supabase: SupabaseClient, userId: stri
     const context = { supabase, userId };
 const today = new Date().toISOString().slice(0, 10);
     const text = await generatePlanText(
-      `Today: ${today}\nGoal: ${data.title}\nDescription: ${data.description || "(none)"}\nGoal deadline: ${data.deadline}\nParticipants (use these exact names as assignee): ${data.participants.join(", ")}\nDays available: ${Math.round((Date.parse(data.deadline) - Date.parse(today)) / 86400000)}`,
+      `Today: ${today}\nGoal: ${data.title}\nDescription: ${data.description || "(none)"}\nGoal deadline: ${data.deadline}\nParticipants (use these exact names as assignee): ${data.participants.join(", ")}\nConfirmed project details: ${data.context || "(none)"}\nDays available: ${Math.round((Date.parse(data.deadline) - Date.parse(today)) / 86400000)}`,
     );
     const plan = JSON.parse(text) as Plan;
 

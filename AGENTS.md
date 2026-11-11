@@ -17,3 +17,4 @@
 - Projects are shared through `goal_members` (owner row added by trigger); goal/task RLS uses `is_goal_member`, and joining only happens via the `accept_goal_invite` function — keeps access invite-only and atomic.
 - Profiles (username, avatar, bio) are created by an `auth.users` trigger from signup metadata; avatars live in a private bucket and are stored as long-lived signed URLs because the workspace blocks public buckets.
 - Direct messages use the `messages` table with Realtime; teammates are per-user `team_contacts` rows.
+- The Goal Clarifier (`clarifyGoal` in `src/lib/plan-core.ts`) is stateless: the dialog sends the whole chat each round and passes the confirmed summary to the planner as `context` — no database storage needed.

@@ -85,6 +85,8 @@ export type Database = {
           description: string
           id: string
           participants: Json
+          pending_invitees: Json
+          status: string
           title: string
           user_id: string
         }
@@ -94,6 +96,8 @@ export type Database = {
           description?: string
           id?: string
           participants?: Json
+          pending_invitees?: Json
+          status?: string
           title: string
           user_id?: string
         }
@@ -103,6 +107,8 @@ export type Database = {
           description?: string
           id?: string
           participants?: Json
+          pending_invitees?: Json
+          status?: string
           title?: string
           user_id?: string
         }
@@ -134,6 +140,126 @@ export type Database = {
           sender_id?: string
         }
         Relationships: []
+      }
+      plan_chat: {
+        Row: {
+          content: string
+          created_at: string
+          goal_id: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          goal_id: string
+          id?: string
+          role: string
+          user_id?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          goal_id?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_chat_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_proposals: {
+        Row: {
+          created_at: string
+          goal_id: string
+          id: string
+          op: Json
+          source: string
+          status: string
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          goal_id: string
+          id?: string
+          op: Json
+          source?: string
+          status?: string
+          summary?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          goal_id?: string
+          id?: string
+          op?: Json
+          source?: string
+          status?: string
+          summary?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_proposals_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_reviews: {
+        Row: {
+          created_at: string
+          criteria: Json
+          goal_id: string
+          id: string
+          problems: Json
+          recommendations: Json
+          score: number
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          criteria?: Json
+          goal_id: string
+          id?: string
+          problems?: Json
+          recommendations?: Json
+          score: number
+          summary?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          criteria?: Json
+          goal_id?: string
+          id?: string
+          problems?: Json
+          recommendations?: Json
+          score?: number
+          summary?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_reviews_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -168,6 +294,7 @@ export type Database = {
           description: string
           goal_id: string
           id: string
+          manually_edited: boolean
           position: number
           priority: string
           status: string
@@ -182,6 +309,7 @@ export type Database = {
           description?: string
           goal_id: string
           id?: string
+          manually_edited?: boolean
           position?: number
           priority?: string
           status?: string
@@ -196,6 +324,7 @@ export type Database = {
           description?: string
           goal_id?: string
           id?: string
+          manually_edited?: boolean
           position?: number
           priority?: string
           status?: string
