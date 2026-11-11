@@ -5,9 +5,10 @@ import { addContact, meQuery, searchProfiles, type Profile } from "@/lib/social"
 import { UserAvatar } from "@/components/social/UserAvatar";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Wand2 } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Send, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import { createGoalPlan } from "@/lib/plan.functions";
+import { clarifyGoalFn, createGoalPlan } from "@/lib/plan.functions";
+import type { ClarifyResult } from "@/lib/plan-core";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,24 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
   }, [me]);
   const qc = useQueryClient();
   const create = useServerFn(createGoalPlan);
+  const clarify = useServerFn(clarifyGoalFn);
+  const [step, setStep] = useState<"form" | "clarify">("form");
+  const [chat, setChat] = useState<{ role: "assistant" | "user"; content: string }[]>([]);
+  const [latest, setLatest] = useState<ClarifyResult | null>(null);
+  const [reply, setReply] = useState("");
+  const participantList = () => names.map((n, i) => n.trim() || `Teammate ${i + 1}`);
+  const ask = useMutation({
+    mutationFn: (messages: { role: "assistant" | "user"; content: string }[]) =>
+      clarify({ data: { title, description, deadline, participants: participantList(), messages } }),
+    onSuccess: (r, messages) => {
+      const text = [r.message, ...r.questions.map((q, i) => `${i + 1}. ${q}`)].filter(Boolean).join("\n");
+      setChat([...messages, { role: "assistant", content: text }]);
+      setLatest(r);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "The clarifier could not respond"),
+  });
+  const buildPlan = () =>
+    m.mutate({ data: { title, description, deadline, participants: participantList(), context: latest?.summary || undefined } });
 
   const m = useMutation({
     mutationFn: create,
@@ -46,6 +65,9 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
       setTitle("");
       setDescription("");
       setDeadline("");
+      setStep("form");
+      setChat([]);
+      setLatest(null);
       onCreated(goalId);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not create plan"),
@@ -68,13 +90,55 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Create a goal project</DialogTitle>
-          <DialogDescription>AI will split it into prioritized tasks and give each teammate a role.</DialogDescription>
+          <DialogDescription>
+            {step === "form" ? "First, our AI clarifier makes sure it understands your goal. Then it splits it into prioritized tasks." : "Answer a few questions so the plan fits what you really need."}
+          </DialogDescription>
         </DialogHeader>
+        {step === "clarify" ? (
+          <div className="space-y-3">
+            <div className="max-h-72 space-y-2 overflow-y-auto rounded-xl border bg-panel/60 p-3">
+              {chat.map((c, i) => (
+                <div key={i} className={c.role === "user" ? "ml-8 rounded-lg bg-primary/15 p-2 text-sm whitespace-pre-wrap" : "mr-8 rounded-lg bg-muted p-2 text-sm whitespace-pre-wrap"}>
+                  {c.content}
+                </div>
+              ))}
+              {ask.isPending && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Thinking…</p>}
+            </div>
+            {latest?.ready ? (
+              <div className="rounded-xl border border-primary/50 p-3">
+                <p className="mb-1 text-sm font-semibold">Here's what I understood — does this look right?</p>
+                <p className="text-sm whitespace-pre-wrap text-muted-foreground">{latest.summary}</p>
+              </div>
+            ) : null}
+            {!ask.isPending && latest && (
+              <form
+                className="flex gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!reply.trim()) return;
+                  ask.mutate([...chat, { role: "user", content: reply.trim() }]);
+                  setReply("");
+                }}
+              >
+                <Textarea rows={2} aria-label="Your answer" placeholder={latest.ready ? "Anything to correct or add?" : "Type your answers…"} value={reply} onChange={(e) => setReply(e.target.value)} />
+                <Button type="submit" size="icon" aria-label="Send"><Send /></Button>
+              </form>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="ghost" disabled={m.isPending} onClick={() => setStep("form")}><ArrowLeft /> Back</Button>
+              <Button type="button" className="flex-1 glow" disabled={m.isPending || ask.isPending} onClick={buildPlan}>
+                {m.isPending ? <Loader2 className="animate-spin" /> : <Wand2 />}
+                {m.isPending ? "Building your plan…" : latest?.ready ? "Looks right — divide into tasks" : "Skip questions & divide into tasks"}
+              </Button>
+            </div>
+          </div>
+        ) : (
         <form
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            m.mutate({ data: { title, description, deadline, participants: names.map((n, i) => n.trim() || `Teammate ${i + 1}`) } });
+            setStep("clarify");
+            if (!chat.length) ask.mutate([]);
           }}
         >
           <div className="space-y-1.5">
@@ -118,11 +182,11 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
               ))}
             </div>
           </div>
-          <Button type="submit" className="w-full glow" disabled={m.isPending}>
-            {m.isPending ? <Loader2 className="animate-spin" /> : <Wand2 />}
-            {m.isPending ? "Building your plan…" : "Divide into tasks"}
+          <Button type="submit" className="w-full glow">
+            <Sparkles /> Continue
           </Button>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );
