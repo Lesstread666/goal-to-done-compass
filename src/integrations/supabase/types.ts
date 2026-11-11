@@ -397,7 +397,6 @@ export type Database = {
           inviter_username: string
         }[]
       }
-      publish_goal: { Args: { p_goal_id: string }; Returns: number }
       username_available: { Args: { p_username: string }; Returns: boolean }
     }
     Enums: {

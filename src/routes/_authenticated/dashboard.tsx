@@ -19,7 +19,6 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { autoReplan } from "@/lib/replan-apply";
-import { PlanReview } from "@/components/goal/PlanReview";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   validateSearch: z.object({ goal: z.string().optional() }),
@@ -68,7 +67,6 @@ function Dashboard() {
             >
               <Target className="h-4 w-4 shrink-0" />
               <span className="truncate">{g.title}</span>
-              {g.status === "draft" && <span className="ml-auto rounded bg-muted px-1.5 text-[10px] font-semibold uppercase text-muted-foreground">Draft</span>}
             </button>
           ))}
           {!goals.length && <p className="px-2 text-sm text-muted-foreground">No goals yet.</p>}
@@ -77,7 +75,7 @@ function Dashboard() {
 
       <div className="min-w-0 flex-1">
         {goal ? (
-          goal.status === "draft" ? <PlanReview key={goal.id} goal={goal} goals={goals} onSelect={select} /> : <GoalView goal={goal} goals={goals} onSelect={select} />
+          <GoalView goal={goal} goals={goals} onSelect={select} />
         ) : (
           <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
             <div className="w-full max-w-xl"><InvitesBanner onJoined={select} /></div>
@@ -134,7 +132,7 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
           onChange={(e) => onSelect(e.target.value)}
         >
           {goals.map((g) => (
-            <option key={g.id} value={g.id}>{g.title}{g.status === "draft" ? " (draft)" : ""}</option>
+            <option key={g.id} value={g.id}>{g.title}</option>
           ))}
         </select>
 

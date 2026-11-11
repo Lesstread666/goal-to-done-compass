@@ -17,5 +17,3 @@
 - Projects are shared through `goal_members` (owner row added by trigger); goal/task RLS uses `is_goal_member`, and joining only happens via the `accept_goal_invite` function — keeps access invite-only and atomic.
 - Profiles (username, avatar, bio) are created by an `auth.users` trigger from signup metadata; avatars live in a private bucket and are stored as long-lived signed URLs because the workspace blocks public buckets.
 - Direct messages use the `messages` table with Realtime; teammates are per-user `team_contacts` rows.
-- New web projects start as `goals.status='draft'` with invitees held in `pending_invitees`; the invoker-rights `publish_goal` function flips to active and sends invites once — keeps drafts private and publishing idempotent.
-- Plan review is a separate AI pass (`src/lib/review-core.ts`); the score is the mean of seven criterion scores (`src/lib/review-ops.ts`) and AI edits are stored as one-task `plan_proposals` applied only on owner Accept — keeps scores explainable and changes owner-approved.
