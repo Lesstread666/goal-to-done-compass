@@ -31,7 +31,7 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
 
   const m = useMutation({
     mutationFn: create,
-    onSuccess: async ({ goalId }) => {
+    onSuccess: async ({ goalId, warning }) => {
       const invitees = picked.filter((p): p is Profile => !!p && p.id !== me?.id);
       for (const p of invitees) {
         const { error } = await supabase.from("goal_invites").insert({ goal_id: goalId, invitee_id: p.id });
@@ -41,6 +41,7 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
       setPicked([null]);
       qc.invalidateQueries({ queryKey: ["goals"] });
       toast.success("Your plan is ready");
+      if (warning) toast.warning(warning, { duration: 10000 });
       setOpen(false);
       setTitle("");
       setDescription("");
