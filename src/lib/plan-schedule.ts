@@ -30,10 +30,10 @@ export function schedulePlan(
   const avg = est.reduce((a, b) => a + b, 0) / participants.length;
   const assignee = raw.map((t, i) => {
     let a = participants.includes(t.assignee) ? t.assignee : "";
-    if (!a || (participants.length > 1 && load.get(a)! + est[i] > avg * 1.25)) {
-      a = [...load.entries()].sort((x, y) => x[1] - y[1])[0][0];
+    if (!a || (participants.length > 1 && load.get(a)! + est[i]! > avg * 1.25)) {
+      a = [...load.entries()].sort((x, y) => x[1] - y[1])[0]![0];
     }
-    load.set(a, load.get(a)! + est[i]);
+    load.set(a, load.get(a)! + est[i]!);
     return a;
   });
 
@@ -41,9 +41,9 @@ export function schedulePlan(
   const finish: number[] = [];
   const free = new Map(participants.map((p) => [p, 0]));
   for (let i = 0; i < n; i++) {
-    const start = Math.max(free.get(assignee[i])!, ...deps[i].map((d) => finish[d]), 0);
-    finish[i] = start + est[i];
-    free.set(assignee[i], finish[i]);
+    const start = Math.max(free.get(assignee[i]!)!, ...deps[i]!.map((d) => finish[d]!), 0);
+    finish[i]! = start + est[i]!;
+    free.set(assignee[i]!, finish[i]!);
   }
   const length = Math.max(...finish);
   // Leave ~10% buffer before the deadline; stretch short plans across the timeline, squeeze long ones.
@@ -55,29 +55,29 @@ export function schedulePlan(
 
   // Slack = how late a task could finish without delaying anything after it.
   const latest = finish.map(() => length);
-  for (let i = n - 1; i >= 0; i--) for (const d of deps[i]) latest[d] = Math.min(latest[d], latest[i] - est[i]);
+  for (let i = n - 1; i >= 0; i--) for (const d of deps[i]!) latest[d]! = Math.min(latest[d]!, latest[i]! - est[i]!);
 
   const due = finish.map((f) => Math.min(span, Math.max(1, Math.round(f * scale))));
   const score = raw.map((t, i) => {
-    const critical = latest[i] - finish[i] < 0.5 ? 1 : 0;
-    const soon = due[i] <= Math.max(3, span * 0.25) ? 1 : 0;
+    const critical = latest[i]! - finish[i]! < 0.5 ? 1 : 0;
+    const soon = due[i]! <= Math.max(3, span * 0.25) ? 1 : 0;
     const blocks = deps.some((d) => d.includes(i)) ? 0.5 : 0;
     return (W[t.priority] ?? 1) + critical + soon + blocks;
   });
   // Reserve High for genuinely critical work: at most ~a third of tasks.
   const maxHigh = Math.max(1, Math.ceil(n / 3));
-  const highSet = new Set(score.map((s, i) => [s, i]).filter(([s]) => s >= 3).sort((a, b) => b[0] - a[0] || a[1] - b[1]).slice(0, maxHigh).map(([, i]) => i));
+  const highSet = new Set(score.map((s, i): [number, number] => [s, i]).filter(([s]) => s >= 3).sort((a, b) => b[0] - a[0] || a[1] - b[1]).slice(0, maxHigh).map(([, i]) => i));
 
-  const order = raw.map((_, i) => i).sort((a, b) => due[a] - due[b] || a - b);
+  const order = raw.map((_, i) => i).sort((a, b) => due[a]! - due[b]! || a - b);
   const tasks = order.map((i, pos) => {
-    const after = deps[i].map((d) => `"${raw[d].title}"`).join(", ");
-    const notes = [raw[i].phase && `Phase: ${raw[i].phase}`, `~${est[i]} day${est[i] === 1 ? "" : "s"}`, after && `After: ${after}`].filter(Boolean).join(" · ");
+    const after = deps[i]!.map((d) => `"${raw[d]!.title}"`).join(", ");
+    const notes = [raw[i]!.phase && `Phase: ${raw[i]!.phase}`, `~${est[i]!} day${est[i]! === 1 ? "" : "s"}`, after && `After: ${after}`].filter(Boolean).join(" · ");
     return {
-      title: raw[i].title,
-      description: [raw[i].description, notes].filter(Boolean).join("\n\n"),
-      priority: (highSet.has(i) ? "high" : score[i] >= 2 ? "medium" : "low") as ScheduledTask["priority"],
-      assignee: assignee[i],
-      deadline: toStr(toDay(today) + due[i] * DAY),
+      title: raw[i]!.title,
+      description: [raw[i]!.description, notes].filter(Boolean).join("\n\n"),
+      priority: (highSet.has(i) ? "high" : score[i]! >= 2 ? "medium" : "low") as ScheduledTask["priority"],
+      assignee: assignee[i]!,
+      deadline: toStr(toDay(today) + due[i]! * DAY),
       position: pos,
     };
   });

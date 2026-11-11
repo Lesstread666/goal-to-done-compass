@@ -22,7 +22,7 @@ describe("schedulePlan", () => {
   it("schedules a dependent task no earlier than its prerequisite", () => {
     const { tasks } = schedulePlan([t("Design", { estimated_days: 5 }), t("Build", { depends_on: [0], assignee: "B" })], opts);
     const d = Object.fromEntries(tasks.map((x) => [x.title, x.deadline]));
-    expect(d.Build >= d.Design).toBe(true);
+    expect(d["Build"]! >= d["Design"]!).toBe(true);
   });
   it("balances work so one participant is not overloaded", () => {
     const { tasks } = schedulePlan(Array.from({ length: 6 }, (_, i) => t(`T${i}`)), opts);
