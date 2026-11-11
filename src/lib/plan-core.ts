@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { schedulePlan, type RawTask } from "./plan-schedule";
 
 export const PlanInput = z.object({
   title: z.string().min(2).max(200),
@@ -10,8 +11,9 @@ export const PlanInput = z.object({
 const schema = {
   type: "object",
   additionalProperties: false,
-  required: ["roles", "tasks"],
+  required: ["complexity", "roles", "tasks"],
   properties: {
+    complexity: { type: "string", enum: ["simple", "short_project", "long_project"] },
     roles: {
       type: "array",
       items: {
@@ -26,13 +28,15 @@ const schema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["title", "description", "priority", "assignee", "deadline"],
+        required: ["title", "description", "priority", "assignee", "phase", "estimated_days", "depends_on"],
         properties: {
           title: { type: "string" },
           description: { type: "string" },
-          priority: { type: "string", enum: ["high", "medium", "low"] },
+          priority: { type: "string", enum: ["high", "medium", "low"], description: "Importance/impact, not urgency. High only for critical-path or blocking work." },
           assignee: { type: "string" },
-          deadline: { type: "string", description: "YYYY-MM-DD" },
+          phase: { type: "string", description: "Stage or milestone name; empty string for simple goals." },
+          estimated_days: { type: "number", description: "Realistic working days of effort." },
+          depends_on: { type: "array", items: { type: "integer" }, description: "0-based indexes of EARLIER tasks that must finish first." },
         },
       },
     },
@@ -41,11 +45,12 @@ const schema = {
 
 type Plan = {
   roles: { name: string; role: string }[];
-  tasks: { title: string; description: string; priority: string; assignee: string; deadline: string }[];
+  complexity: string;
+  tasks: RawTask[];
 };
 
 const INSTRUCTIONS =
-  "You are a project planner who helps overwhelmed people turn big goals into small, concrete, actionable tasks. Each task should be doable in a few hours to two days. Order tasks in logical sequence. Assign each participant a fitting role and spread tasks across participants by role. Deadlines must be between today and the goal deadline, spaced realistically.";
+  "You are a pragmatic project planner. First classify the goal: 'simple' (a few actions, 2-5 tasks, no phases), 'short_project' (several coordinated tasks, 5-10), or 'long_project' (multi-week: group 8-16 tasks into logical phases/milestones sized to the work, not equal weeks). Never inflate a simple goal into a big plan. For each task estimate realistic working days, list dependencies on earlier tasks (by index) and allow independent tasks to run in parallel. Priority reflects importance and impact: reserve 'high' for critical, blocking work; most tasks should be medium or low. Do not set dates - the app schedules them across the full timeline. Assign each participant a fitting generic role without inventing specific skills, and spread effort evenly.";
 
 function extractText(output: unknown): string {
   let text = "";
@@ -100,7 +105,7 @@ export async function generateAndSavePlan(supabase: SupabaseClient, userId: stri
     const context = { supabase, userId };
 const today = new Date().toISOString().slice(0, 10);
     const text = await generatePlanText(
-      `Today: ${today}\nGoal: ${data.title}\nDescription: ${data.description || "(none)"}\nGoal deadline: ${data.deadline}\nParticipants (use these exact names as assignee): ${data.participants.join(", ")}\nCreate 6-14 tasks.`,
+      `Today: ${today}\nGoal: ${data.title}\nDescription: ${data.description || "(none)"}\nGoal deadline: ${data.deadline}\nParticipants (use these exact names as assignee): ${data.participants.join(", ")}\nDays available: ${Math.round((Date.parse(data.deadline) - Date.parse(today)) / 86400000)}`,
     );
     const plan = JSON.parse(text) as Plan;
 
@@ -122,19 +127,10 @@ const today = new Date().toISOString().slice(0, 10);
       .single();
     if (error) throw new Error(error.message);
 
-    const valid = /^\d{4}-\d{2}-\d{2}$/;
-    const rows = plan.tasks.map((t, i) => ({
-      goal_id: goal.id,
-      user_id: context.userId,
-      title: t.title,
-      description: t.description,
-      priority: ["high", "medium", "low"].includes(t.priority) ? t.priority : "medium",
-      assignee: data.participants.includes(t.assignee) ? t.assignee : (data.participants[i % data.participants.length] ?? null),
-      deadline: valid.test(t.deadline) ? t.deadline : data.deadline,
-      position: i,
-    }));
+    const { tasks: scheduled, warning } = schedulePlan(plan.tasks, { today, deadline: data.deadline, participants: data.participants });
+    const rows = scheduled.map((t) => ({ ...t, goal_id: goal.id, user_id: context.userId }));
     const { error: tErr } = await context.supabase.from("tasks").insert(rows);
     if (tErr) throw new Error(tErr.message);
 
-        return { goalId: goal.id as string, taskCount: rows.length };
+        return { goalId: goal.id as string, taskCount: rows.length, warning };
 }

@@ -6,6 +6,6 @@ export const createGoalPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => PlanInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { goalId } = await generateAndSavePlan(context.supabase, context.userId, data);
-    return { goalId };
+    const { goalId, warning } = await generateAndSavePlan(context.supabase, context.userId, data);
+    return { goalId, warning };
   });

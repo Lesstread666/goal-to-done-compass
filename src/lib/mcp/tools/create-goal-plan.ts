@@ -19,14 +19,14 @@ export default defineTool({
     const userId = ctx.getUserId();
     if (!userId) throw new ToolError("Not signed in");
     await ctx.progress({ progress: 0, total: 1, message: "Building your plan…" });
-    const { goalId, taskCount } = await generateAndSavePlan(supabaseForUser(ctx), userId, {
+    const { goalId, taskCount, warning } = await generateAndSavePlan(supabaseForUser(ctx), userId, {
       title,
       description: description ?? "",
       deadline,
       participants: participants ?? ["Me"],
     });
     return {
-      content: [{ type: "text", text: `Created "${title}" with ${taskCount} tasks (goal id ${goalId}). Use list_tasks to see them.` }],
+      content: [{ type: "text", text: `Created "${title}" with ${taskCount} tasks (goal id ${goalId}). Use list_tasks to see them.${warning ? " Warning: " + warning : ""}` }],
       structuredContent: { goal_id: goalId, task_count: taskCount },
     };
   },
