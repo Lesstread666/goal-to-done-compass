@@ -43,6 +43,13 @@
       "when": 1793724607069,
       "tag": "0005_rebalance_on_accept",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794406743614,
+      "tag": "0006_plan_review_drafts",
+      "breakpoints": true
     }
   ]
 }

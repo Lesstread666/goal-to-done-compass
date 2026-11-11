@@ -8,6 +8,8 @@ export type Goal = {
   description: string;
   deadline: string | null;
   participants: Participant[];
+  status: "draft" | "active";
+  pending_invitees: string[];
   created_at: string;
 };
 export type Task = {
@@ -21,6 +23,7 @@ export type Task = {
   deadline: string | null;
   position: number;
   completed_at: string | null;
+  manually_edited?: boolean;
   created_at: string;
 };
 

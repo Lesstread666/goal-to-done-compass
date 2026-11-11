@@ -18,7 +18,7 @@ export function EditTaskDialog({ task, participants }: { task: Task; participant
   const qc = useQueryClient();
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("tasks").update({ title: draft.title.trim(), description: draft.description, deadline: draft.deadline || null, priority: draft.priority, assignee: draft.assignee, status: draft.status, completed_at: draft.status === "done" ? task.completed_at ?? new Date().toISOString() : null }).eq("id", task.id).select("id").single();
+      const { error } = await supabase.from("tasks").update({ title: draft.title.trim(), description: draft.description, deadline: draft.deadline || null, priority: draft.priority, assignee: draft.assignee, status: draft.status, completed_at: draft.status === "done" ? task.completed_at ?? new Date().toISOString() : null, manually_edited: true }).eq("id", task.id).select("id").single();
       if (error) throw error;
     },
     onSuccess: async () => { await qc.invalidateQueries({ queryKey: ["tasks", task.goal_id] }); setOpen(false); toast.success("Task updated"); },

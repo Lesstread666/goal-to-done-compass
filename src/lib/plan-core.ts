@@ -63,15 +63,20 @@ function extractText(output: unknown): string {
 }
 
 async function generatePlanText(input: string): Promise<string> {
+  return generateJsonText(INSTRUCTIONS, input, "plan", schema);
+}
+
+/** Runs one structured-output AI call (strict JSON schema) and returns the raw JSON text. */
+export async function generateJsonText(instructions: string, input: string, name: string, schema: Record<string, unknown>): Promise<string> {
   // Lovable hosting injects LOVABLE_API_KEY automatically; self-hosted
   // deployments (e.g. Vercel) fall back to a direct OpenAI call.
   if (process.env["LOVABLE_API_KEY"]) {
     const { generateResponse } = await import("@lovable.dev/ai-gateway");
     const res = await generateResponse({
       model: "openai/gpt-6-astra",
-      instructions: INSTRUCTIONS,
+      instructions,
       input,
-      text: { format: { type: "json_schema", name: "plan", strict: true, schema } },
+      text: { format: { type: "json_schema", name, strict: true, schema } },
     });
     return extractText(res.output);
   }
@@ -87,9 +92,9 @@ async function generatePlanText(input: string): Promise<string> {
     headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: "gpt-4.1",
-      instructions: INSTRUCTIONS,
+      instructions,
       input,
-      text: { format: { type: "json_schema", name: "plan", strict: true, schema } },
+      text: { format: { type: "json_schema", name, strict: true, schema } },
     }),
   });
   if (!r.ok) throw new Error(`OpenAI request failed (${r.status}): ${(await r.text()).slice(0, 300)}`);
@@ -101,7 +106,7 @@ async function generatePlanText(input: string): Promise<string> {
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Generates an AI plan and saves the goal + tasks as the given user (RLS applies). */
-export async function generateAndSavePlan(supabase: SupabaseClient, userId: string, data: z.infer<typeof PlanInput>) {
+export async function generateAndSavePlan(supabase: SupabaseClient, userId: string, data: z.infer<typeof PlanInput>, opts: { draft?: boolean; invitees?: string[] } = {}) {
     const context = { supabase, userId };
 const today = new Date().toISOString().slice(0, 10);
     const text = await generatePlanText(
@@ -122,6 +127,8 @@ const today = new Date().toISOString().slice(0, 10);
         deadline: data.deadline,
         participants,
         user_id: context.userId,
+        status: opts.draft ? "draft" : "active",
+        pending_invitees: opts.invitees ?? [],
       })
       .select()
       .single();

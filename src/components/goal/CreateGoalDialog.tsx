@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { addContact, meQuery, searchProfiles, type Profile } from "@/lib/social";
+import { meQuery, searchProfiles, type Profile } from "@/lib/social";
 import { UserAvatar } from "@/components/social/UserAvatar";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -32,15 +31,9 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
   const m = useMutation({
     mutationFn: create,
     onSuccess: async ({ goalId, warning }) => {
-      const invitees = picked.filter((p): p is Profile => !!p && p.id !== me?.id);
-      for (const p of invitees) {
-        const { error } = await supabase.from("goal_invites").insert({ goal_id: goalId, invitee_id: p.id });
-        if (!error) await addContact(p.id).catch(() => {});
-      }
-      if (invitees.length) toast.success(`Invites sent to ${invitees.map((p) => "@" + p.username).join(", ")}`);
       setPicked([null]);
-      qc.invalidateQueries({ queryKey: ["goals"] });
-      toast.success("Your plan is ready");
+      await qc.invalidateQueries({ queryKey: ["goals"] });
+      toast.success("Draft plan ready — review it before publishing");
       if (warning) toast.warning(warning, { duration: 10000 });
       setOpen(false);
       setTitle("");
@@ -74,7 +67,7 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            m.mutate({ data: { title, description, deadline, participants: names.map((n, i) => n.trim() || `Teammate ${i + 1}`) } });
+            m.mutate({ data: { title, description, deadline, participants: names.map((n, i) => n.trim() || `Teammate ${i + 1}`), invitees: picked.filter((p): p is Profile => !!p && p.id !== me?.id).map((p) => p.id) } });
           }}
         >
           <div className="space-y-1.5">
@@ -97,7 +90,7 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
           </div>
           <div className="space-y-1.5">
             <Label>Participants</Label>
-            <p className="text-xs text-muted-foreground">Type a username to pick a Ticklist user — they get an invite and keep the tasks assigned to them.</p>
+            <p className="text-xs text-muted-foreground">Type a username to pick a Ticklist user — they get an invite when you publish and keep the tasks assigned to them.</p>
             <div className="grid gap-2 sm:grid-cols-2">
               {names.map((n, i) => (
                 <ParticipantField
