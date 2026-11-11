@@ -11,9 +11,15 @@ async function loadPlan(supabase: SupabaseClient, goalId: string) {
   if (tErr) throw new Error(tErr.message);
   const participants = ((goal.participants as { name: string; role: string }[]) ?? []);
   const today = new Date().toISOString().slice(0, 10);
+  // Owner's chat messages carry extra project details; rejected ideas must not be proposed again.
+  const { data: notes } = await supabase.from("plan_chat").select("content").eq("goal_id", goalId).eq("role", "user").order("created_at");
+  const { data: rejected } = await supabase.from("plan_proposals").select("summary").eq("goal_id", goalId).eq("status", "rejected");
   const text = [
     `Today: ${today}`, `Goal: ${goal.title}`, `Description: ${goal.description || "(none)"}`, `Goal deadline: ${goal.deadline}`,
-    `Participants: ${participants.map((p) => `${p.name} (${p.role})`).join(", ")}`, "Tasks:",
+    `Participants: ${participants.map((p) => `${p.name} (${p.role})`).join(", ")}`,
+    `Extra details from the owner (treat as facts about the project): ${(notes ?? []).map((n) => `\n- ${n.content}`).join("") || "(none)"}`,
+    `Suggestions the owner rejected (do not propose again): ${(rejected ?? []).map((r) => `\n- ${r.summary}`).join("") || "(none)"}`,
+    "Tasks:",
     ...((tasks ?? []) as Row[]).map((t) => `- id=${t.id}${t.manually_edited ? " [EDITED BY OWNER]" : ""} | ${t.title} | priority ${t.priority} | ${t.assignee ?? "unassigned"} | due ${t.deadline ?? "none"}\n  ${t.description.replace(/\n+/g, " ")}`),
   ].join("\n");
   return { text, participants: participants.map((p) => p.name) };
@@ -36,7 +42,7 @@ const reviewSchema = {
 export async function reviewAndStore(supabase: SupabaseClient, goalId: string) {
   const { text } = await loadPlan(supabase, goalId);
   const out = JSON.parse(await generateJsonText(
-    "You are a strict, fair project-plan quality reviewer. Score each criterion 1-10 against the actual plan: clarity (actionable, not vague or over-complicated), completeness (missing stages/preparation), sequence (logical order, dependencies), prioritization (high reserved for critical work), timeline (realistic deadlines spread over the duration, no conflicts), workload (balanced across participants), feasibility (achievable by the deadline, risks). A 10 means nothing to improve. List concrete problems and recommendations, and up to 6 specific proposals that fix the biggest problems. " + RULES,
+    "You are a strict, fair project-plan quality reviewer. Score each criterion 1-10 against the actual plan: clarity (actionable, not vague or over-complicated), completeness (missing stages/preparation), sequence (logical order, dependencies), prioritization (high reserved for critical work), timeline (realistic deadlines spread over the duration, no conflicts), workload (balanced across participants), feasibility (achievable by the deadline, risks). A 10 means nothing to improve. Use the owner's extra details: propose task changes that reflect them (new tasks, clearer descriptions, removed unnecessary work). List concrete problems and recommendations, and up to 6 specific proposals that fix the biggest problems. " + RULES,
     text, "plan_review", reviewSchema,
   )) as { criteria: Record<string, number>; summary: string; problems: string[]; recommendations: string[]; proposals: (PlanOp & { summary: string })[] };
 

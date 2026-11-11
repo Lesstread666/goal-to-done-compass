@@ -38,14 +38,16 @@ export function PlanReview({ goal, goals, onSelect }: { goal: Goal; goals: Goal[
   const refresh = () => Promise.all(["tasks", "plan-review", "plan-proposals", "plan-chat"].map((k) => qc.invalidateQueries({ queryKey: [k, goal.id] })));
 
   const review = useServerFn(reviewPlan);
-  const reReview = useMutation({ mutationFn: () => review({ data: { goalId: goal.id } }), onSuccess: () => { refresh(); toast.success("Plan re-reviewed"); }, onError: () => toast.error("The review didn't finish. Please try again.") });
+  const reReview = useMutation({ mutationFn: () => review({ data: { goalId: goal.id } }), onSuccess: () => { refresh(); toast.success("Plan re-assessed"); }, onError: () => toast.error("The review didn't finish. Please try again.") });
 
   const send = useServerFn(chatPlan);
   const [msg, setMsg] = useState("");
-  const ask = useMutation({ mutationFn: (m: string) => send({ data: { goalId: goal.id, message: m } }), onSuccess: () => { setMsg(""); refresh(); }, onError: () => toast.error("The assistant couldn't answer. Your message is still in the box.") });
+  const ask = useMutation({ mutationFn: (m: string) => send({ data: { goalId: goal.id, message: m } }), onSuccess: async () => { setMsg(""); await refresh(); reReview.mutate(); }, onError: () => toast.error("The assistant couldn't answer. Your message is still in the box.") });
 
+  const [changed, setChanged] = useState<Set<string>>(new Set());
   const decide = useMutation({
     mutationFn: async ({ p, accept }: { p: Proposal; accept: boolean }) => {
+      let title = "", id: string | null = null;
       if (accept) {
         const w = opToWrite(p.op, tasks, goal.participants.map((x) => x.name), goal.id, tasks.length);
         if (!w) throw new Error("This suggestion no longer matches the plan.");
@@ -53,11 +55,18 @@ export function PlanReview({ goal, goals, onSelect }: { goal: Goal; goals: Goal[
           : w.type === "update" ? await supabase.from("tasks").update(w.patch as never).eq("id", w.id)
           : await supabase.from("tasks").delete().eq("id", w.id);
         if (r.error) throw r.error;
+        title = w.type === "insert" ? String(w.row["title"]) : tasks.find((t) => t.id === w.id)?.title ?? "task";
+        id = w.type === "update" ? w.id : null;
       }
       const { error } = await supabase.from("plan_proposals").update({ status: accept ? "accepted" : "rejected" }).eq("id", p.id).eq("status", "pending");
       if (error) throw error;
+      return { accept, title, id };
     },
-    onSuccess: refresh,
+    onSuccess: async (res) => {
+      if (res.accept) { toast.success(`Plan updated: ${res.title}`); if (res.id) setChanged((s) => new Set(s).add(res.id!)); }
+      await refresh();
+      reReview.mutate();
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not apply the change"),
   });
 
@@ -145,14 +154,16 @@ export function PlanReview({ goal, goals, onSelect }: { goal: Goal; goals: Goal[
             <Button size="sm" variant="outline" onClick={() => addTask.mutate()} disabled={addTask.isPending}><Plus /> Add task</Button>
           </div>
           <div className="space-y-2">
-            {tasks.map((t) => <ReviewTask key={t.id} task={t} goal={goal} onChanged={refresh} />)}
+            {tasks.map((t) => <ReviewTask key={t.id} task={t} goal={goal} onChanged={refresh} highlight={changed.has(t.id)} />)}
           </div>
         </section>
       </div>
 
       <aside className="space-y-4">
         <section className="rounded-2xl border bg-panel/60 p-4">
-          <h2 className="mb-2 font-semibold">Suggested changes</h2>
+          <h2 className="mb-1 font-semibold">Suggested changes</h2>
+          <p className="mb-2 text-xs text-muted-foreground">Waiting for your OK. Each Accept or Reject re-assesses the plan.</p>
+          {reReview.isPending && <p className="mb-2 flex items-center gap-2 text-xs text-primary"><Loader2 className="h-3 w-3 animate-spin" /> Re-assessing the plan…</p>}
           {!proposals.data?.length ? <p className="text-sm text-muted-foreground">No pending suggestions.</p> : (
             <ul className="space-y-2">
               {proposals.data.map((p) => (
@@ -162,8 +173,8 @@ export function PlanReview({ goal, goals, onSelect }: { goal: Goal; goals: Goal[
                   {p.op.title && p.op.kind !== "delete" && <p className="mt-1 text-xs text-muted-foreground">→ {p.op.title}{p.op.priority && ` · ${p.op.priority}`}{p.op.assignee && ` · ${p.op.assignee}`}{p.op.deadline && ` · due ${p.op.deadline}`}</p>}
                   {p.op.task_id && tasks.find((t) => t.id === p.op.task_id)?.manually_edited && <p className="mt-1 text-xs text-chart-4">You edited this task by hand.</p>}
                   <div className="mt-2 flex gap-2">
-                    <Button size="sm" onClick={() => decide.mutate({ p, accept: true })} disabled={decide.isPending}><Check /> Accept</Button>
-                    <Button size="sm" variant="outline" onClick={() => decide.mutate({ p, accept: false })} disabled={decide.isPending}><X /> Reject</Button>
+                    <Button size="sm" onClick={() => decide.mutate({ p, accept: true })} disabled={decide.isPending || reReview.isPending}><Check /> Accept</Button>
+                    <Button size="sm" variant="outline" onClick={() => decide.mutate({ p, accept: false })} disabled={decide.isPending || reReview.isPending}><X /> Reject</Button>
                   </div>
                 </li>
               ))}
@@ -215,14 +226,15 @@ function List({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-function ReviewTask({ task, goal, onChanged }: { task: Task; goal: Goal; onChanged: () => void }) {
+function ReviewTask({ task, goal, onChanged, highlight }: { task: Task; goal: Goal; onChanged: () => void; highlight?: boolean }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border bg-card p-3">
+    <div className={cn("flex items-start gap-3 rounded-xl border bg-card p-3", highlight && "border-primary ring-1 ring-primary/40")}>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{task.title}</span>
           <span className={cn("rounded px-1.5 text-[10px] font-semibold uppercase", prio[task.priority])}>{task.priority}</span>
           {task.manually_edited && <span className="text-[10px] text-muted-foreground uppercase">edited</span>}
+          {highlight && <span className="text-[10px] font-semibold uppercase text-primary">updated</span>}
         </div>
         {task.description && <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">{task.description}</p>}
         <p className="mt-1 text-xs text-muted-foreground">{task.assignee ?? "Unassigned"} · {task.deadline ? `due ${new Date(task.deadline).toLocaleDateString()}` : "no deadline"}</p>
