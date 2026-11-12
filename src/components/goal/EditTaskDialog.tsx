@@ -31,7 +31,7 @@ export function EditTaskDialog({ task, participants }: { task: Task; participant
         <DialogHeader><DialogTitle>Edit task</DialogTitle><DialogDescription>{task.title}</DialogDescription></DialogHeader>
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (draft.title.trim()) save.mutate(); }}>
           <div className="space-y-1.5"><Label htmlFor="task-title">Task</Label><Input id="task-title" required value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="task-description">Description</Label><Textarea id="task-description" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="task-description">Description</Label><Textarea id="task-description" rows={5} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="task-date">Deadline</Label><Input id="task-date" type="date" value={draft.deadline ?? ""} onChange={(e) => setDraft({ ...draft, deadline: e.target.value || null })} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label>Priority</Label><Select value={draft.priority} onValueChange={(v) => setDraft({ ...draft, priority: v as Task["priority"] })}><SelectTrigger aria-label="Priority"><SelectValue /></SelectTrigger><SelectContent>{["high", "medium", "low"].map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>

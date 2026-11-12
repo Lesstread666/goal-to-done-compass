@@ -5,7 +5,7 @@ import { addContact, meQuery, searchProfiles, type Profile } from "@/lib/social"
 import { UserAvatar } from "@/components/social/UserAvatar";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Plus, Send, Sparkles, Wand2 } from "lucide-react";
+import { ArrowLeft, Loader2, Minus, Plus, Send, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { clarifyGoalFn, createGoalPlan } from "@/lib/plan.functions";
 import type { ClarifyResult } from "@/lib/plan-core";
@@ -147,12 +147,16 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="g-desc">Description</Label>
-            <Textarea id="g-desc" rows={3} placeholder="What does done look like?" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Textarea id="g-desc" rows={4} placeholder="What does done look like?" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="g-count">Participants</Label>
-              <Input id="g-count" type="number" min={1} max={12} value={count} onChange={(e) => setParticipantCount(Number(e.target.value))} />
+              <Label id="g-count-label">Participants</Label>
+              <div className="flex items-center gap-2" role="group" aria-labelledby="g-count-label">
+                <Button type="button" variant="outline" size="icon" aria-label="Fewer participants" disabled={count <= 1} onClick={() => setParticipantCount(count - 1)}><Minus className="h-4 w-4" /></Button>
+                <span className="w-8 text-center text-lg font-semibold tabular-nums" aria-live="polite">{count}</span>
+                <Button type="button" variant="outline" size="icon" aria-label="More participants" disabled={count >= 12} onClick={() => setParticipantCount(count + 1)}><Plus className="h-4 w-4" /></Button>
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="g-deadline">Deadline</Label>

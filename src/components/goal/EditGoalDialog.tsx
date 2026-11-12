@@ -55,7 +55,7 @@ export function EditGoalDialog({ goal, tasks, loading }: { goal: Goal; tasks: Ta
         <DialogHeader><DialogTitle>Edit project</DialogTitle><DialogDescription>{goal.title}</DialogDescription></DialogHeader>
         <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate(); }}>
           <div className="space-y-1.5"><Label htmlFor="edit-goal-title">Goal</Label><Input id="edit-goal-title" required value={title} onChange={(e) => setTitle(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label htmlFor="edit-goal-description">Description</Label><Textarea id="edit-goal-description" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor="edit-goal-description">Description</Label><Textarea id="edit-goal-description" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <div className="space-y-1.5"><Label htmlFor="edit-goal-date">Deadline</Label><Input id="edit-goal-date" required type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} /></div>
           <section className="space-y-3 border-t pt-4">
             <div className="flex items-center justify-between"><h3 className="font-semibold">Participants</h3><Button type="button" size="sm" variant="outline" onClick={() => setParticipants([...participants, { name: "", role: "" }])}><Plus className="h-4 w-4" />Add participant</Button></div>

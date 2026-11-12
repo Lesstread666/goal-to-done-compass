@@ -54,7 +54,7 @@ export function AddTaskDialog({ goalId, tasks, participants }: { goalId: string;
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-task-description">Description</Label>
-              <Textarea id="new-task-description" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+              <Textarea id="new-task-description" rows={4} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-task-date">Deadline</Label>
