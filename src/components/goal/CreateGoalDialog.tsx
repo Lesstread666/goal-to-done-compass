@@ -150,7 +150,7 @@ export function CreateGoalDialog({ onCreated, className, icon }: { onCreated: (i
             <Label htmlFor="g-desc">Description</Label>
             <Textarea id="g-desc" rows={4} placeholder="What does done look like?" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label id="g-count-label">Participants</Label>
               <div className="flex items-center gap-2" role="group" aria-labelledby="g-count-label">
