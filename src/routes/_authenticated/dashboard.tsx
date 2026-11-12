@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { DndContext, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { z } from "zod";
-import { ListChecks, Search, Target, AlertTriangle, Layers, Trash2, CalendarDays, Users } from "lucide-react";
+import { ListChecks, Search, Target, AlertTriangle, Layers, Trash2, CalendarDays, Users, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppNav } from "@/components/social/AppNav";
 import { InvitesBanner } from "@/components/social/InvitesBanner";
@@ -279,13 +279,15 @@ function Board({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
     await qc.invalidateQueries({ queryKey: key });
     await autoReplan(qc, goal.id, { taskId: task.id, previousStatus: task.status, status, completedAt: status === "done" ? patch.completed_at : task.completed_at });
   }
+  const [hidden, setHidden] = useState<Record<string, boolean>>({});
+  const toggle = (id: string) => setHidden((h) => ({ ...h, [id]: !h[id] }));
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="mt-5 grid gap-4 md:grid-cols-3">
         {columns.map((c) => {
           const list = tasks.filter((t) => t.status === c.key);
           return (
-            <Column key={c.key} id={c.key} label={c.label} count={list.length}>
+            <Column key={c.key} id={c.key} label={c.label} count={list.length} collapsed={!!hidden[c.key]} onToggle={() => toggle(c.key)}>
               {list.map((t) => (
                 <DraggableTask key={t.id} id={t.id}>
                   <TaskCard task={t} participants={goal.participants} goalDeadline={goal.deadline} />
@@ -299,14 +301,25 @@ function Board({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
   );
 }
 
-function Column({ id, label, count, children }: { id: string; label: string; count: number; children: ReactNode }) {
+function Column({ id, label, count, children, collapsed, onToggle }: { id: string; label: string; count: number; children: ReactNode; collapsed: boolean; onToggle: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div ref={setNodeRef} className={cn("rounded-2xl border bg-panel/60 p-3 transition", isOver && "border-primary bg-primary/10")}>
       <h3 className="mb-3 px-1 text-sm font-semibold tracking-wide uppercase">
-        {label} <span className="text-muted-foreground">({count})</span>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={!collapsed}
+          aria-label={`${collapsed ? "Show" : "Hide"} ${label} tasks`}
+          className="flex w-full items-center justify-between gap-2 text-left md:pointer-events-none"
+        >
+          <span>
+            {label} <span className="text-muted-foreground">({count})</span>
+          </span>
+          <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform md:hidden", collapsed && "-rotate-90")} />
+        </button>
       </h3>
-      <div className="min-h-16 space-y-3">{children}</div>
+      <div className={cn("min-h-16 space-y-3", collapsed && "hidden md:block")}>{children}</div>
     </div>
   );
 }
