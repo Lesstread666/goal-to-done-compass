@@ -13,6 +13,7 @@ import { goalsQuery, tasksQuery, isDelayed, initials, todayStr, type Task, type 
 import { getTeamWorkload } from "@/lib/workload";
 import { CreateGoalDialog } from "@/components/goal/CreateGoalDialog";
 import { TaskCard } from "@/components/goal/TaskCard";
+import { AddTaskDialog } from "@/components/goal/AddTaskDialog";
 import { InsightsPanel } from "@/components/goal/InsightsPanel";
 import { EditGoalDialog } from "@/components/goal/EditGoalDialog";
 import { DeleteDialog } from "@/components/goal/DeleteDialog";
@@ -155,6 +156,10 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
               <TabsTrigger value="team">By teammate</TabsTrigger>
             </TabsList>
           </Tabs>
+        </div>
+
+        <div className="mt-3">
+          <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} />
         </div>
 
         {isLoading ? (
