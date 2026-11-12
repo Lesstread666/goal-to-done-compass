@@ -163,13 +163,13 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border bg-panel/60 p-2 sm:flex sm:flex-wrap sm:items-center xl:flex-nowrap [&_button]:sm:h-9 [&_button]:sm:px-3">
+        <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border bg-panel/60 p-2 sm:flex sm:flex-wrap sm:items-center [&_button]:sm:h-9 [&_button]:sm:px-3">
           <InviteDialog goal={goal} className="w-full sm:w-auto" />
           <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} className="w-full sm:w-auto" />
           <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} goalDeadline={goal.deadline} className="col-span-2 w-full glow sm:w-auto" />
           <CreateGoalDialog onCreated={onSelect} icon={<Layers />} className="col-span-2 w-full border border-primary bg-transparent text-primary hover:bg-primary/10 sm:w-auto" />
           <div className="col-span-2 sm:ml-auto sm:flex sm:items-center sm:gap-2">
-            <span className="hidden h-6 w-px bg-border xl:block" />
+            <span className="hidden h-6 w-px bg-border 2xl:block" />
             <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} trigger={(open) => (
               <Button variant="outline" onClick={open} className="w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive sm:w-auto"><Trash2 />Delete project</Button>
             )} onDelete={async () => {
