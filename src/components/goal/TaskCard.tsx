@@ -33,17 +33,19 @@ export function TaskCard({ task, participants = [], goalDeadline }: { task: Task
 
   return (
     <div className={cn("glass rounded-xl p-3.5 transition", delayed && "border-destructive/60 bg-destructive/10")}>
-      <div className="flex items-start gap-1">
+      <div className="flex items-center justify-between gap-1">
         <EditTaskDialog task={task} participants={participants} goalDeadline={goalDeadline} />
-        <div className="flex min-w-0 flex-1 items-start gap-2 pt-1">
-          {task.status === "done" && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
-          <h4 className={cn("min-w-0 flex-1 break-words text-sm font-semibold leading-snug", task.status === "done" && "text-muted-foreground line-through")}>{task.title}</h4>
-        </div>
         <DeleteDialog label="Delete task" description={`Remove “${task.title}” from this project.`} onDelete={async () => {
           const { error } = await supabase.from("tasks").delete().eq("id", task.id).select("id").single();
           if (error) throw error;
           await qc.invalidateQueries({ queryKey: ["tasks", task.goal_id] });
         }} />
+      </div>
+      <div className="mt-2 border-t border-border/60 pt-2.5">
+        <div className="flex items-start gap-2">
+          <CheckCircle2 className={cn("mt-0.5 h-4 w-4 shrink-0", task.status === "done" ? "text-primary" : "text-primary/70")} />
+          <h4 className={cn("min-w-0 flex-1 break-words text-sm font-semibold leading-snug", task.status === "done" && "text-muted-foreground line-through")}>{task.title}</h4>
+        </div>
       </div>
       {task.description && <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">{task.description}</p>}
       {delayed && (
