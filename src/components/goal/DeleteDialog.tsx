@@ -14,7 +14,7 @@ export function DeleteDialog({ label, description, onDelete, trigger }: { trigge
     onError: () => toast.error("Could not delete. Please try again."),
   });
   return <>
-    {trigger ? trigger(() => setOpen(true)) : <Button variant="ghost" size="icon" aria-label={label} title={label} onClick={() => setOpen(true)} className="shrink-0 text-destructive"><Trash2 className="h-4 w-4" /></Button>}
+    {trigger ? trigger(() => setOpen(true)) : <Button variant="ghost" size="icon" aria-label={label} title={label} onClick={() => setOpen(true)} className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/15 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>}
     <AlertDialog open={open} onOpenChange={(value) => { if (!mutation.isPending) setOpen(value); }}>
       <AlertDialogContent className="max-w-[calc(100%-2rem)] sm:max-w-lg">
         <AlertDialogHeader><AlertDialogTitle>{label}?</AlertDialogTitle><AlertDialogDescription>{description} This cannot be undone.</AlertDialogDescription></AlertDialogHeader>

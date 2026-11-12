@@ -26,7 +26,7 @@ export function EditTaskDialog({ task, participants, goalDeadline }: { task: Tas
     onError: () => toast.error("Could not save task. Please try again."),
   });
   return <>
-    <Button size="icon" variant="ghost" title="Edit task" aria-label="Edit task" className="ml-auto shrink-0" onClick={() => { setDraft(task); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+    <Button size="icon" variant="ghost" title="Edit task" aria-label="Edit task" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground" onClick={() => { setDraft(task); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
     <Dialog open={open} onOpenChange={(v) => { if (!save.isPending) setOpen(v); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle>Edit task</DialogTitle><DialogDescription>{task.title}</DialogDescription></DialogHeader>
