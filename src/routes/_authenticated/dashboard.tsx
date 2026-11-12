@@ -159,7 +159,7 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
         </div>
 
         <div className="mt-3">
-          <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} />
+          <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} goalDeadline={goal.deadline} />
         </div>
 
         {isLoading ? (
@@ -185,12 +185,12 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {mine.map((t) => <TaskCard key={t.id} task={t} participants={goal.participants} />)}
+                    {mine.map((t) => <TaskCard key={t.id} task={t} participants={goal.participants} goalDeadline={goal.deadline} />)}
                   </div>
                 </div>
               );
             })}
-            {filtered.some((t) => !t.assignee || !goal.participants.some((p) => p.name === t.assignee)) && <section className="border-t pt-4"><h3 className="mb-3 text-sm font-semibold">Unassigned</h3><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{filtered.filter((t) => !t.assignee || !goal.participants.some((p) => p.name === t.assignee)).map((t) => <TaskCard key={t.id} task={t} participants={goal.participants} />)}</div></section>}
+            {filtered.some((t) => !t.assignee || !goal.participants.some((p) => p.name === t.assignee)) && <section className="border-t pt-4"><h3 className="mb-3 text-sm font-semibold">Unassigned</h3><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{filtered.filter((t) => !t.assignee || !goal.participants.some((p) => p.name === t.assignee)).map((t) => <TaskCard key={t.id} task={t} participants={goal.participants} goalDeadline={goal.deadline} />)}</div></section>}
           </div>
         )}
       </div>
@@ -231,7 +231,7 @@ function Board({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
             <Column key={c.key} id={c.key} label={c.label} count={list.length}>
               {list.map((t) => (
                 <DraggableTask key={t.id} id={t.id}>
-                  <TaskCard task={t} participants={goal.participants} />
+                  <TaskCard task={t} participants={goal.participants} goalDeadline={goal.deadline} />
                 </DraggableTask>
               ))}
             </Column>

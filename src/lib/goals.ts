@@ -26,6 +26,14 @@ export type Task = {
 
 export const todayStr = () => new Date().toISOString().slice(0, 10);
 
+/** Latest selectable task deadline: the day before the project deadline (null when the project has none). */
+export function maxTaskDeadline(goalDeadline: string | null | undefined): string | undefined {
+  if (!goalDeadline) return undefined;
+  const d = new Date(`${goalDeadline}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 /** A task is delayed when it is not done and its deadline is before today. */
 export function isDelayed(t: Pick<Task, "status" | "deadline">, today = todayStr()) {
   return t.status !== "done" && !!t.deadline && t.deadline < today;

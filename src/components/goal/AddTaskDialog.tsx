@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Participant, Task } from "@/lib/goals";
+import { maxTaskDeadline, type Participant, type Task } from "@/lib/goals";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 
 const emptyDraft = { title: "", description: "", deadline: "", priority: "medium" as Task["priority"], assignee: null as string | null };
 
-export function AddTaskDialog({ goalId, tasks, participants }: { goalId: string; tasks: Task[]; participants?: Participant[] | null | undefined }) {
+export function AddTaskDialog({ goalId, tasks, participants, goalDeadline }: { goalId: string; tasks: Task[]; participants?: Participant[] | null | undefined; goalDeadline?: string | null | undefined }) {
   const team = participants ?? [];
+  const maxDate = maxTaskDeadline(goalDeadline);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
   const qc = useQueryClient();
@@ -58,7 +59,8 @@ export function AddTaskDialog({ goalId, tasks, participants }: { goalId: string;
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-task-date">Deadline</Label>
-              <Input id="new-task-date" type="date" value={draft.deadline} onChange={(e) => setDraft({ ...draft, deadline: e.target.value })} />
+              <Input id="new-task-date" type="date" max={maxDate} value={draft.deadline} onChange={(e) => setDraft({ ...draft, deadline: e.target.value })} />
+              {maxDate && <p className="text-xs text-muted-foreground">Must be before the project deadline ({new Date(`${goalDeadline}T00:00:00`).toLocaleDateString()}).</p>}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">

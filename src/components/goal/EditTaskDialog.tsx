@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Participant, Task } from "@/lib/goals";
+import { maxTaskDeadline, type Participant, type Task } from "@/lib/goals";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
-export function EditTaskDialog({ task, participants }: { task: Task; participants?: Participant[] | null | undefined }) {
+export function EditTaskDialog({ task, participants, goalDeadline }: { task: Task; participants?: Participant[] | null | undefined; goalDeadline?: string | null | undefined }) {
   const team = participants ?? [];
+  const maxDate = maxTaskDeadline(goalDeadline);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(task);
   const qc = useQueryClient();
@@ -32,7 +33,7 @@ export function EditTaskDialog({ task, participants }: { task: Task; participant
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (draft.title.trim()) save.mutate(); }}>
           <div className="space-y-1.5"><Label htmlFor="task-title">Task</Label><Input id="task-title" required value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></div>
           <div className="space-y-1.5"><Label htmlFor="task-description">Description</Label><Textarea id="task-description" rows={5} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label htmlFor="task-date">Deadline</Label><Input id="task-date" type="date" value={draft.deadline ?? ""} onChange={(e) => setDraft({ ...draft, deadline: e.target.value || null })} /></div>
+          <div className="space-y-1.5"><Label htmlFor="task-date">Deadline</Label><Input id="task-date" type="date" max={maxDate} value={draft.deadline ?? ""} onChange={(e) => setDraft({ ...draft, deadline: e.target.value || null })} />{maxDate && <p className="text-xs text-muted-foreground">Must be before the project deadline ({new Date(`${goalDeadline}T00:00:00`).toLocaleDateString()}).</p>}</div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label>Priority</Label><Select value={draft.priority} onValueChange={(v) => setDraft({ ...draft, priority: v as Task["priority"] })}><SelectTrigger aria-label="Priority"><SelectValue /></SelectTrigger><SelectContent>{["high", "medium", "low"].map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent></Select></div>
             <div className="space-y-1.5"><Label>Status</Label><Select value={draft.status} onValueChange={(v) => setDraft({ ...draft, status: v as Task["status"] })}><SelectTrigger aria-label="Status"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todo">To do</SelectItem><SelectItem value="in_progress">In progress</SelectItem><SelectItem value="done">Done</SelectItem></SelectContent></Select></div>
