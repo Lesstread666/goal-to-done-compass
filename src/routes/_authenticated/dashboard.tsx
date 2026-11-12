@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { DndContext, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { z } from "zod";
-import { ListChecks, Search, Target, AlertTriangle, Layers, Trash2, CalendarDays, Users, ChevronDown } from "lucide-react";
+import { ListChecks, Search, Target, AlertTriangle, Trash2, CalendarDays, Users, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppNav } from "@/components/social/AppNav";
 import { InvitesBanner } from "@/components/social/InvitesBanner";
@@ -144,6 +144,14 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
   const delayedCount = tasks.filter((t) => isDelayed(t)).length;
   const workload = getTeamWorkload(tasks, goal.participants.map((p) => p.name), goal.deadline, todayStr());
 
+  async function removeGoal() {
+    const { error } = await supabase.from("goals").delete().eq("id", goal.id).select("id").single();
+    if (error) throw error;
+    qc.removeQueries({ queryKey: ["tasks", goal.id] });
+    await qc.invalidateQueries({ queryKey: ["goals"] });
+    onSelect(goals.find((g) => g.id !== goal.id)?.id ?? "");
+  }
+
   return (
     <div className="grid gap-6 p-4 md:p-8 xl:grid-cols-[1fr_300px]">
       <div className="min-w-0">
@@ -151,53 +159,7 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
           <span className="flex items-center gap-2 font-semibold text-primary"><ListChecks className="h-5 w-5" /> Ticklist</span>
         </div>
         <div className="mb-4"><InvitesBanner onJoined={onSelect} /></div>
-        <div className="text-sm text-muted-foreground">Goal projects › <span className="text-foreground">{goal.title}</span></div>
-        <div className="mt-2 min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="min-w-0 text-2xl font-bold break-words md:text-3xl">{goal.title}</h1>
-            <CreateGoalDialog onCreated={onSelect} iconOnly variant="outline" className="hidden h-8 w-8 shrink-0 border-primary/50 p-0 text-primary hover:bg-primary/10 md:inline-flex" />
-          </div>
-          {info && (
-            <div className="mt-1.5">
-              <GoalStatusBadge status={info.status} title={info.reason} detail={info.total ? `${info.done}/${info.total} tasks done` : undefined} />
-            </div>
-          )}
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-muted-foreground">
-            {goal.deadline && <span className="flex items-center gap-1.5"><CalendarDays className="h-4 w-4" />Deadline {new Date(goal.deadline).toLocaleDateString()}</span>}
-            <span className="flex items-center gap-1.5"><Users className="h-4 w-4" />{goal.participants.length} member{goal.participants.length === 1 ? "" : "s"}</span>
-            <InviteDialog goal={goal} className="hidden h-8 shrink-0 gap-1 px-2 text-xs whitespace-nowrap md:inline-flex 2xl:px-2.5 2xl:text-sm" />
-            <div className="hidden items-center gap-1.5 md:ml-auto md:flex">
-              <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} className="h-8 shrink-0 gap-1 px-2 text-xs whitespace-nowrap 2xl:px-2.5 2xl:text-sm" />
-              <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} trigger={(open) => (
-                <Button variant="outline" onClick={open} aria-label="Delete project" title="Delete project" className="h-8 shrink-0 gap-1 border-destructive/60 px-2 text-xs whitespace-nowrap text-destructive hover:bg-destructive/10 hover:text-destructive 2xl:px-2.5 2xl:text-sm"><Trash2 className="h-4 w-4" /> Delete project</Button>
-              )} onDelete={async () => {
-                const { error } = await supabase.from("goals").delete().eq("id", goal.id).select("id").single();
-                if (error) throw error;
-                qc.removeQueries({ queryKey: ["tasks", goal.id] });
-                await qc.invalidateQueries({ queryKey: ["goals"] });
-                onSelect(goals.find((g) => g.id !== goal.id)?.id ?? "");
-              }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border bg-panel/60 p-2 [&_button]:h-9 md:hidden">
-          <InviteDialog goal={goal} className="w-full" />
-          <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} className="w-full" />
-          <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} goalDeadline={goal.deadline} className="col-span-2 w-full glow" />
-          <CreateGoalDialog onCreated={onSelect} icon={<Layers />} className="col-span-2 w-full border border-primary bg-transparent text-primary hover:bg-primary/10" />
-          <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} trigger={(open) => (
-            <Button variant="outline" onClick={open} aria-label="Delete project" className="col-span-2 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 /> Delete project</Button>
-          )} onDelete={async () => {
-            const { error } = await supabase.from("goals").delete().eq("id", goal.id).select("id").single();
-            if (error) throw error;
-            qc.removeQueries({ queryKey: ["tasks", goal.id] });
-            await qc.invalidateQueries({ queryKey: ["goals"] });
-            onSelect(goals.find((g) => g.id !== goal.id)?.id ?? "");
-          }} />
-        </div>
-
-        <div className="mt-4 lg:hidden">
+        <div className="mb-3 lg:hidden">
           <Select value={goal.id} onValueChange={onSelect}>
             <SelectTrigger aria-label="Choose goal" className="h-auto w-full min-w-0 bg-card py-2 text-left whitespace-normal [&>span]:line-clamp-none [&>span]:min-w-0 [&>span]:flex-1">
               <SelectValue />
@@ -214,6 +176,36 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
             </SelectContent>
           </Select>
         </div>
+        <div className="text-sm text-muted-foreground">Goal projects › <span className="text-foreground">{goal.title}</span></div>
+        <div className="mt-2 min-w-0">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 md:flex md:flex-wrap md:items-center">
+            <h1 className="min-w-0 text-2xl font-bold break-words md:text-3xl">{goal.title}</h1>
+            <CreateGoalDialog onCreated={onSelect} iconOnly variant="outline" className="mt-1 inline-flex h-8 w-8 shrink-0 border-primary/50 p-0 text-primary hover:bg-primary/10" />
+          </div>
+          {info && (
+            <div className="mt-1.5">
+              <GoalStatusBadge status={info.status} title={info.reason} detail={info.total ? `${info.done}/${info.total} tasks done` : undefined} />
+            </div>
+          )}
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-muted-foreground">
+            {goal.deadline && <span className="flex items-center gap-1.5"><CalendarDays className="h-4 w-4" />Deadline {new Date(goal.deadline).toLocaleDateString()}</span>}
+            <span className="flex items-center gap-1.5"><Users className="h-4 w-4" />{goal.participants.length} member{goal.participants.length === 1 ? "" : "s"}</span>
+            <InviteDialog goal={goal} className="ml-auto inline-flex h-8 shrink-0 gap-1 px-2 text-xs whitespace-nowrap md:ml-0 2xl:px-2.5 2xl:text-sm" />
+            <div className="hidden items-center gap-1.5 md:ml-auto md:flex">
+              <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} className="h-8 shrink-0 gap-1 px-2 text-xs whitespace-nowrap 2xl:px-2.5 2xl:text-sm" />
+              <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} trigger={(open) => (
+                <Button variant="outline" onClick={open} aria-label="Delete project" title="Delete project" className="h-8 shrink-0 gap-1 border-destructive/60 px-2 text-xs whitespace-nowrap text-destructive hover:bg-destructive/10 hover:text-destructive 2xl:px-2.5 2xl:text-sm"><Trash2 className="h-4 w-4" /> Delete project</Button>
+              )} onDelete={removeGoal} />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 md:hidden">
+          <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} className="w-full" />
+          <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} trigger={(open) => (
+            <Button variant="outline" onClick={open} aria-label="Delete project" className="w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 /> Delete project</Button>
+          )} onDelete={removeGoal} />
+        </div>
 
         {delayedCount > 0 && (
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
@@ -226,7 +218,7 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Search tasks" className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
-          <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} goalDeadline={goal.deadline} className="hidden glow md:inline-flex" />
+          <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} goalDeadline={goal.deadline} className="shrink-0 glow whitespace-nowrap" />
         </div>
 
         <Tabs value={view} onValueChange={(v) => setView(v as "board" | "team")} className="mt-3 w-full sm:w-auto">
