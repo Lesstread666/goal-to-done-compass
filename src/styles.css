@@ -111,7 +111,8 @@
   input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
     opacity: 0.85;
-    padding: 4px;
+    padding: 3px;
+    margin-right: 7px;
     border-radius: var(--radius-sm);
     transition: opacity 150ms, background-color 150ms;
   }
