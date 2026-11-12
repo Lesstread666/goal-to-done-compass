@@ -1,6 +1,8 @@
 import { Area, ComposedChart, CartesianGrid, Line, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useQuery } from "@tanstack/react-query";
-import { initials, isDelayed, type Goal, type Task } from "@/lib/goals";
+import { AlertTriangle } from "lucide-react";
+import { initials, isDelayed, todayStr, type Goal, type Task } from "@/lib/goals";
+import { getTeamWorkload } from "@/lib/workload";
 import { supabase } from "@/integrations/supabase/client";
 import { UserAvatar } from "@/components/social/UserAvatar";
 
@@ -14,6 +16,7 @@ function lastDays(n: number) {
 
 export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
   const names = goal.participants.map((p) => p.name);
+  const workload = getTeamWorkload(tasks, names, goal.deadline, todayStr());
   const { data: profiles } = useQuery({
     queryKey: ["participant-profiles", goal.id, names.join(",")],
     enabled: names.length > 0,
@@ -41,6 +44,7 @@ export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
           {goal.participants.map((p) => {
             const mine = tasks.filter((t) => t.assignee === p.name);
             const late = mine.some((t) => isDelayed(t));
+            const load = workload.find((item) => item.name === p.name);
             const prof = profiles?.find((x) => x.username === p.name);
             return (
               <div key={p.name} className="text-center" title={`${p.name} — ${p.role}`}>
@@ -50,10 +54,16 @@ export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
                   ) : (
                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-foreground">{initials(p.name)}</div>
                   )}
-                  <span className={`absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full ring-2 ring-background ${late ? "bg-destructive" : "bg-success"}`} />
+                  <span className={`absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full ring-2 ring-background ${late ? "bg-destructive" : load?.overloaded ? "bg-warning" : "bg-success"}`} />
                 </div>
                 <div className="mt-1 truncate text-xs">{p.name}</div>
                 <div className="truncate text-[10px] text-muted-foreground">{p.role}</div>
+                <div className="mt-1 text-[11px] text-muted-foreground">{load?.openCount ?? 0} open</div>
+                {load?.overloaded && (
+                  <div title="Overloaded: uneven task load or less than 3 days per open task" className="mt-1 flex flex-wrap items-center justify-center gap-1 text-[10px] font-semibold text-warning">
+                    <AlertTriangle className="h-3 w-3 shrink-0" /> Overloaded
+                  </div>
+                )}
               </div>
             );
           })}

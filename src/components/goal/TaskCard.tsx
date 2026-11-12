@@ -25,7 +25,7 @@ export function TaskCard({ task, participants = [] }: { task: Task; participants
     },
     onSuccess: async (_d, patch) => {
       await qc.invalidateQueries({ queryKey: ["tasks", task.goal_id] });
-      if (patch.status === "done") await autoReplan(qc, task.goal_id);
+      if (patch.status) await autoReplan(qc, task.goal_id, { taskId: task.id, previousStatus: task.status, status: patch.status, completedAt: patch.status === "done" ? patch.completed_at ?? null : task.completed_at });
     },
     onError: () => toast.error("Could not update task. Please try again."),
   });
@@ -70,6 +70,7 @@ export function TaskCard({ task, participants = [] }: { task: Task; participants
       </div>
       <Select
         value={task.status}
+        disabled={update.isPending}
         onValueChange={(v) =>
           update.mutate({ status: v as Task["status"], completed_at: v === "done" ? new Date().toISOString() : null })
         }
