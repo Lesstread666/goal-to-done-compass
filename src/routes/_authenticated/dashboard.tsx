@@ -222,26 +222,26 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
         )}
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <div className="relative w-full sm:w-56 md:w-64">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Search tasks" className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
-          <Tabs value={view} onValueChange={(v) => setView(v as "board" | "team")} className="w-full sm:w-auto">
-            <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
-              <TabsTrigger value="board">Board</TabsTrigger>
-              <TabsTrigger value="team">By teammate</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <div className="hidden flex-1 md:block" />
           <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} goalDeadline={goal.deadline} className="hidden glow md:inline-flex" />
         </div>
+
+        <Tabs value={view} onValueChange={(v) => setView(v as "board" | "team")} className="mt-3 w-full sm:w-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
+            <TabsTrigger value="board">Board</TabsTrigger>
+            <TabsTrigger value="team">By teammate</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {isLoading ? (
           <p className="mt-8 text-muted-foreground">Loading tasks…</p>
         ) : view === "board" ? (
           <Board goal={goal} tasks={filtered} />
         ) : (
-          <div className="mt-5 space-y-4">
+          <div className="mt-3 space-y-4">
             {goal.participants.map((p) => {
               const mine = filtered.filter((t) => t.assignee === p.name);
               const load = workload.find((item) => item.name === p.name);
@@ -300,7 +300,7 @@ function Board({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
   const toggle = (id: string) => setHidden((h) => ({ ...h, [id]: !h[id] }));
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="mt-5 grid gap-4 md:grid-cols-3">
+      <div className="mt-3 grid gap-4 md:grid-cols-3">
         {columns.map((c) => {
           const list = tasks.filter((t) => t.status === c.key);
           return (
