@@ -20,3 +20,4 @@
 - The Goal Clarifier (`clarifyGoal` in `src/lib/plan-core.ts`) is stateless: the dialog sends the whole chat each round and passes the confirmed summary to the planner as `context` — no database storage needed.
 - Derive project-local teammate load in `src/lib/workload.ts` for both reassessment and overload flags; use open task counts because effort and availability are not stored, and never change assignments during reassessment.
 - Completion reassessment records per-task before/after fields in browser-local undo history; both board and card reopening restore unchanged automatic fields, with priority-only recalculation when history is unavailable, to avoid schema changes and overwriting later edits.
+- Derive goal status (completed/failed/at risk/on track) in `src/lib/goal-status.ts` from task data, never stored — keeps sidebar, mobile picker and badges consistent.

@@ -21,6 +21,45 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { autoReplan } from "@/lib/replan-apply";
+import { getGoalStatus, type GoalStatusInfo } from "@/lib/goal-status";
+import { GoalStatusBadge, GoalStatusIcon, statusStyle } from "@/components/goal/GoalStatusIcon";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+function useGoalStatuses(goals: Goal[], activeId?: string) {
+  const { data: activeTasks } = useQuery({ ...tasksQuery(activeId ?? ""), enabled: !!activeId });
+  const { data: rows = [] } = useQuery({
+    queryKey: ["tasks", "all-status", goals.map((g) => g.id).join(",")],
+    enabled: goals.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("tasks").select("goal_id, status, deadline").in("goal_id", goals.map((g) => g.id));
+      if (error) throw error;
+      return data as Pick<Task, "goal_id" | "status" | "deadline">[];
+    },
+  });
+  const map: Partial<Record<string, GoalStatusInfo>> = {};
+  for (const g of goals) map[g.id] = getGoalStatus(g.deadline, g.id === activeId && activeTasks ? activeTasks : rows.filter((r) => r.goal_id === g.id));
+  return map;
+}
+
+const statusTitle = (i?: GoalStatusInfo) => (i ? `${statusStyle[i.status].label}: ${i.reason}` : undefined);
+
+function GoalRowText({ title, info }: { title: string; info?: GoalStatusInfo | undefined }) {
+  return (
+    <span className="min-w-0 flex-1">
+      <span className="block truncate">{title}</span>
+      {info && (
+        <>
+          <span className={cn("block truncate text-[11px]", info.status === "on_track" ? "text-muted-foreground" : statusStyle[info.status].text)}>
+            {info.total ? `${info.done}/${info.total} done · ` : ""}{info.detail}
+          </span>
+          <span className="mt-1 block h-1 overflow-hidden rounded-full bg-muted">
+            <span className={cn("block h-full rounded-full", statusStyle[info.status].bar)} style={{ width: `${info.pct}%` }} />
+          </span>
+        </>
+      )}
+    </span>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   validateSearch: z.object({ goal: z.string().optional() }),
@@ -50,6 +89,7 @@ function Dashboard() {
   const navigate = useNavigate({ from: "/dashboard" });
   const goal = goals.find((g) => g.id === goalParam) ?? goals[0];
   const select = (id: string) => navigate({ search: { goal: id } });
+  const statuses = useGoalStatuses(goals, goal?.id);
 
   return (
     <div className="flex min-h-screen pb-20 md:pb-0">
@@ -62,13 +102,14 @@ function Dashboard() {
             <button
               key={g.id}
               onClick={() => select(g.id)}
+              title={statusTitle(statuses[g.id])}
               className={cn(
-                "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm",
+                "flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-sm",
                 g.id === goal?.id ? "bg-accent text-accent-foreground" : "hover:bg-muted",
               )}
             >
-              <Target className="h-4 w-4 shrink-0" />
-              <span className="truncate">{g.title}</span>
+              <GoalStatusIcon status={statuses[g.id]?.status ?? "on_track"} className="mt-0.5" />
+              <GoalRowText title={g.title} info={statuses[g.id]} />
             </button>
           ))}
           {!goals.length && <p className="px-2 text-sm text-muted-foreground">No goals yet.</p>}
@@ -77,7 +118,7 @@ function Dashboard() {
 
       <div className="min-w-0 flex-1">
         {goal ? (
-          <GoalView goal={goal} goals={goals} onSelect={select} />
+          <GoalView goal={goal} goals={goals} onSelect={select} statuses={statuses} />
         ) : (
           <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
             <div className="w-full max-w-xl"><InvitesBanner onJoined={select} /></div>
@@ -92,7 +133,8 @@ function Dashboard() {
   );
 }
 
-function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSelect: (id: string) => void }) {
+function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal[]; onSelect: (id: string) => void; statuses: Partial<Record<string, GoalStatusInfo>> }) {
+  const info = statuses[goal.id];
   const qc = useQueryClient();
   const { data: tasks = [], isLoading } = useQuery(tasksQuery(goal.id));
   const [q, setQ] = useState("");
@@ -110,8 +152,11 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
         <div className="mb-4"><InvitesBanner onJoined={onSelect} /></div>
         <div className="text-sm text-muted-foreground">Goal projects › <span className="text-foreground">{goal.title}</span></div>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold md:text-3xl">{goal.title}</h1>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold md:text-3xl">{goal.title}</h1>
+              {info && <GoalStatusBadge status={info.status} title={info.reason} />}
+            </div>
             {goal.deadline && <p className="mt-1 text-sm text-muted-foreground">Deadline {new Date(goal.deadline).toLocaleDateString()}</p>}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -128,16 +173,23 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
           </div>
         </div>
 
-        <select
-          aria-label="Choose goal"
-          className="mt-4 w-full rounded-lg border bg-card p-2 text-sm lg:hidden"
-          value={goal.id}
-          onChange={(e) => onSelect(e.target.value)}
-        >
-          {goals.map((g) => (
-            <option key={g.id} value={g.id}>{g.title}</option>
-          ))}
-        </select>
+        <div className="mt-4 lg:hidden">
+          <Select value={goal.id} onValueChange={onSelect}>
+            <SelectTrigger aria-label="Choose goal" className="h-auto w-full min-w-0 bg-card py-2 text-left whitespace-normal [&>span]:line-clamp-none [&>span]:min-w-0 [&>span]:flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]">
+              {goals.map((g) => (
+                <SelectItem key={g.id} value={g.id} className="min-w-0 [&>span]:min-w-0 [&>span]:flex-1">
+                  <span className="flex min-w-0 items-start gap-2">
+                    <GoalStatusIcon status={statuses[g.id]?.status ?? "on_track"} className="mt-0.5" />
+                    <GoalRowText title={g.title} info={statuses[g.id]} />
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {delayedCount > 0 && (
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
