@@ -215,7 +215,7 @@ function Board({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
       return void qc.invalidateQueries({ queryKey: key });
     }
     await qc.invalidateQueries({ queryKey: key });
-    if (status === "done") await autoReplan(qc, goal.id);
+    await autoReplan(qc, goal.id, { taskId: task.id, previousStatus: task.status, status, completedAt: status === "done" ? patch.completed_at : task.completed_at });
   }
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>

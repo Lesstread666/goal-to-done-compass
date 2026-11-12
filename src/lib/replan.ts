@@ -16,7 +16,7 @@ export type TaskPatch = { id: string; deadline: string | null; priority: Task["p
  *    The team's average load is a floor; unassigned tasks keep the project-wide rule.
  * Returns only tasks that actually change.
  */
-export function replanTasks(tasks: Task[], goalDeadline: string | null, today: string, participantNames: string[] = []): TaskPatch[] {
+export function replanTasks(tasks: Task[], goalDeadline: string | null, today: string, participantNames: string[] = [], pullDeadlines = true): TaskPatch[] {
   const open = tasks
     .filter((t) => t.status !== "done")
     .sort((a, b) => (a.deadline ?? "9999").localeCompare(b.deadline ?? "9999") || a.position - b.position);
@@ -25,7 +25,7 @@ export function replanTasks(tasks: Task[], goalDeadline: string | null, today: s
   const t0 = toDay(today);
   const tomorrow = t0 + DAY;
   const first = open.find((t) => t.deadline)?.deadline;
-  const shift = first ? Math.max(0, toDay(first) - tomorrow) : 0;
+  const shift = pullDeadlines && first ? Math.max(0, toDay(first) - tomorrow) : 0;
   const runway = goalDeadline ? Math.max(0, (toDay(goalDeadline) - t0) / DAY) : null;
   const loads = getTeamWorkload(tasks, participantNames, goalDeadline, today);
   const averageLoad = loads.length ? open.filter((task) => task.assignee).length / loads.length : open.length;
