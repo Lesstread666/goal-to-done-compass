@@ -4,7 +4,8 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { DndContext, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { z } from "zod";
-import { ListChecks, Search, Target, AlertTriangle } from "lucide-react";
+import { ListChecks, Search, Target, AlertTriangle, Trash2, CalendarDays, Users, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { AppNav } from "@/components/social/AppNav";
 import { InvitesBanner } from "@/components/social/InvitesBanner";
 import { InviteDialog } from "@/components/goal/InviteDialog";
@@ -21,6 +22,45 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { autoReplan } from "@/lib/replan-apply";
+import { getGoalStatus, type GoalStatusInfo } from "@/lib/goal-status";
+import { GoalStatusBadge, GoalStatusIcon, statusStyle } from "@/components/goal/GoalStatusIcon";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+function useGoalStatuses(goals: Goal[], activeId?: string) {
+  const { data: activeTasks } = useQuery({ ...tasksQuery(activeId ?? ""), enabled: !!activeId });
+  const { data: rows = [] } = useQuery({
+    queryKey: ["tasks", "all-status", goals.map((g) => g.id).join(",")],
+    enabled: goals.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("tasks").select("goal_id, status, deadline").in("goal_id", goals.map((g) => g.id));
+      if (error) throw error;
+      return data as Pick<Task, "goal_id" | "status" | "deadline">[];
+    },
+  });
+  const map: Partial<Record<string, GoalStatusInfo>> = {};
+  for (const g of goals) map[g.id] = getGoalStatus(g.deadline, g.id === activeId && activeTasks ? activeTasks : rows.filter((r) => r.goal_id === g.id));
+  return map;
+}
+
+const statusTitle = (i?: GoalStatusInfo) => (i ? `${statusStyle[i.status].label}: ${i.reason}` : undefined);
+
+function GoalRowText({ title, info }: { title: string; info?: GoalStatusInfo | undefined }) {
+  return (
+    <span className="min-w-0 flex-1">
+      <span className="block truncate">{title}</span>
+      {info && (
+        <>
+          <span className={cn("block truncate text-[11px]", info.status === "on_track" ? "text-muted-foreground" : statusStyle[info.status].text)}>
+            {info.total ? `${info.done}/${info.total} done · ` : ""}{info.detail}
+          </span>
+          <span className="mt-1 block h-1 overflow-hidden rounded-full bg-muted">
+            <span className={cn("block h-full rounded-full", statusStyle[info.status].bar)} style={{ width: `${info.pct}%` }} />
+          </span>
+        </>
+      )}
+    </span>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   validateSearch: z.object({ goal: z.string().optional() }),
@@ -50,6 +90,7 @@ function Dashboard() {
   const navigate = useNavigate({ from: "/dashboard" });
   const goal = goals.find((g) => g.id === goalParam) ?? goals[0];
   const select = (id: string) => navigate({ search: { goal: id } });
+  const statuses = useGoalStatuses(goals, goal?.id);
 
   return (
     <div className="flex min-h-screen pb-20 md:pb-0">
@@ -62,13 +103,14 @@ function Dashboard() {
             <button
               key={g.id}
               onClick={() => select(g.id)}
+              title={statusTitle(statuses[g.id])}
               className={cn(
-                "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm",
+                "flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-sm",
                 g.id === goal?.id ? "bg-accent text-accent-foreground" : "hover:bg-muted",
               )}
             >
-              <Target className="h-4 w-4 shrink-0" />
-              <span className="truncate">{g.title}</span>
+              <GoalStatusIcon status={statuses[g.id]?.status ?? "on_track"} className="mt-0.5" />
+              <GoalRowText title={g.title} info={statuses[g.id]} />
             </button>
           ))}
           {!goals.length && <p className="px-2 text-sm text-muted-foreground">No goals yet.</p>}
@@ -77,7 +119,7 @@ function Dashboard() {
 
       <div className="min-w-0 flex-1">
         {goal ? (
-          <GoalView goal={goal} goals={goals} onSelect={select} />
+          <GoalView goal={goal} goals={goals} onSelect={select} statuses={statuses} />
         ) : (
           <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
             <div className="w-full max-w-xl"><InvitesBanner onJoined={select} /></div>
@@ -92,7 +134,8 @@ function Dashboard() {
   );
 }
 
-function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSelect: (id: string) => void }) {
+function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal[]; onSelect: (id: string) => void; statuses: Partial<Record<string, GoalStatusInfo>> }) {
+  const info = statuses[goal.id];
   const qc = useQueryClient();
   const { data: tasks = [], isLoading } = useQuery(tasksQuery(goal.id));
   const [q, setQ] = useState("");
@@ -101,6 +144,14 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
   const delayedCount = tasks.filter((t) => isDelayed(t)).length;
   const workload = getTeamWorkload(tasks, goal.participants.map((p) => p.name), goal.deadline, todayStr());
 
+  async function removeGoal() {
+    const { error } = await supabase.from("goals").delete().eq("id", goal.id).select("id").single();
+    if (error) throw error;
+    qc.removeQueries({ queryKey: ["tasks", goal.id] });
+    await qc.invalidateQueries({ queryKey: ["goals"] });
+    onSelect(goals.find((g) => g.id !== goal.id)?.id ?? "");
+  }
+
   return (
     <div className="grid gap-6 p-4 md:p-8 xl:grid-cols-[1fr_300px]">
       <div className="min-w-0">
@@ -108,36 +159,53 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
           <span className="flex items-center gap-2 font-semibold text-primary"><ListChecks className="h-5 w-5" /> Ticklist</span>
         </div>
         <div className="mb-4"><InvitesBanner onJoined={onSelect} /></div>
+        <div className="mb-3 lg:hidden">
+          <Select value={goal.id} onValueChange={onSelect}>
+            <SelectTrigger aria-label="Choose goal" className="h-auto w-full min-w-0 bg-card py-2 text-left whitespace-normal [&>span]:line-clamp-none [&>span]:min-w-0 [&>span]:flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]">
+              {goals.map((g) => (
+                <SelectItem key={g.id} value={g.id} className="min-w-0 [&>span]:min-w-0 [&>span]:flex-1">
+                  <span className="flex min-w-0 items-start gap-2">
+                    <GoalStatusIcon status={statuses[g.id]?.status ?? "on_track"} className="mt-0.5" />
+                    <GoalRowText title={g.title} info={statuses[g.id]} />
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="text-sm text-muted-foreground">Goal projects › <span className="text-foreground">{goal.title}</span></div>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold md:text-3xl">{goal.title}</h1>
-            {goal.deadline && <p className="mt-1 text-sm text-muted-foreground">Deadline {new Date(goal.deadline).toLocaleDateString()}</p>}
+        <div className="mt-2 min-w-0">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 md:flex md:flex-wrap md:items-center">
+            <h1 className="min-w-0 text-2xl font-bold break-words md:text-3xl">{goal.title}</h1>
+            <CreateGoalDialog onCreated={onSelect} iconOnly variant="outline" className="mt-1 inline-flex h-8 w-8 shrink-0 border-primary/50 p-0 text-primary hover:bg-primary/10" />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <InviteDialog goal={goal} />
-            <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} />
-            <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} onDelete={async () => {
-              const { error } = await supabase.from("goals").delete().eq("id", goal.id).select("id").single();
-              if (error) throw error;
-              qc.removeQueries({ queryKey: ["tasks", goal.id] });
-              await qc.invalidateQueries({ queryKey: ["goals"] });
-              onSelect(goals.find((g) => g.id !== goal.id)?.id ?? "");
-            }} />
-            <CreateGoalDialog onCreated={onSelect} />
+          {info && (
+            <div className="mt-1.5">
+              <GoalStatusBadge status={info.status} title={info.reason} detail={info.total ? `${info.done}/${info.total} tasks done` : undefined} />
+            </div>
+          )}
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-muted-foreground">
+            {goal.deadline && <span className="flex items-center gap-1.5"><CalendarDays className="h-4 w-4" />Deadline {new Date(goal.deadline).toLocaleDateString()}</span>}
+            <span className="flex items-center gap-1.5"><Users className="h-4 w-4" />{goal.participants.length} member{goal.participants.length === 1 ? "" : "s"}</span>
+            <InviteDialog goal={goal} className="ml-auto inline-flex h-8 shrink-0 gap-1 px-2 text-xs whitespace-nowrap md:ml-0 2xl:px-2.5 2xl:text-sm" />
+            <div className="hidden items-center gap-1.5 md:ml-auto md:flex">
+              <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} className="h-8 shrink-0 gap-1 px-2 text-xs whitespace-nowrap 2xl:px-2.5 2xl:text-sm" />
+              <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} trigger={(open) => (
+                <Button variant="outline" onClick={open} aria-label="Delete project" title="Delete project" className="h-8 shrink-0 gap-1 border-destructive/60 px-2 text-xs whitespace-nowrap text-destructive hover:bg-destructive/10 hover:text-destructive 2xl:px-2.5 2xl:text-sm"><Trash2 className="h-4 w-4" /> Delete project</Button>
+              )} onDelete={removeGoal} />
+            </div>
           </div>
         </div>
 
-        <select
-          aria-label="Choose goal"
-          className="mt-4 w-full rounded-lg border bg-card p-2 text-sm lg:hidden"
-          value={goal.id}
-          onChange={(e) => onSelect(e.target.value)}
-        >
-          {goals.map((g) => (
-            <option key={g.id} value={g.id}>{g.title}</option>
-          ))}
-        </select>
+        <div className="mt-4 grid grid-cols-2 gap-2 md:hidden">
+          <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} className="w-full" />
+          <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} trigger={(open) => (
+            <Button variant="outline" onClick={open} aria-label="Delete project" className="w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 /> Delete project</Button>
+          )} onDelete={removeGoal} />
+        </div>
 
         {delayedCount > 0 && (
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
@@ -146,28 +214,26 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
         )}
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <div className="relative min-w-48 flex-1">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Search tasks" className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
-          <Tabs value={view} onValueChange={(v) => setView(v as "board" | "team")}>
-            <TabsList>
-              <TabsTrigger value="board">Board</TabsTrigger>
-              <TabsTrigger value="team">By teammate</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} goalDeadline={goal.deadline} className="shrink-0 glow whitespace-nowrap" />
         </div>
 
-        <div className="mt-3">
-          <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} goalDeadline={goal.deadline} />
-        </div>
+        <Tabs value={view} onValueChange={(v) => setView(v as "board" | "team")} className="mt-3 w-full sm:w-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
+            <TabsTrigger value="board">Board</TabsTrigger>
+            <TabsTrigger value="team">By teammate</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {isLoading ? (
           <p className="mt-8 text-muted-foreground">Loading tasks…</p>
         ) : view === "board" ? (
           <Board goal={goal} tasks={filtered} />
         ) : (
-          <div className="mt-5 space-y-4">
+          <div className="mt-3 space-y-4">
             {goal.participants.map((p) => {
               const mine = filtered.filter((t) => t.assignee === p.name);
               const load = workload.find((item) => item.name === p.name);
@@ -222,13 +288,15 @@ function Board({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
     await qc.invalidateQueries({ queryKey: key });
     await autoReplan(qc, goal.id, { taskId: task.id, previousStatus: task.status, status, completedAt: status === "done" ? patch.completed_at : task.completed_at });
   }
+  const [hidden, setHidden] = useState<Record<string, boolean>>({});
+  const toggle = (id: string) => setHidden((h) => ({ ...h, [id]: !h[id] }));
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="mt-5 grid gap-4 md:grid-cols-3">
+      <div className="mt-3 grid gap-4 md:grid-cols-3">
         {columns.map((c) => {
           const list = tasks.filter((t) => t.status === c.key);
           return (
-            <Column key={c.key} id={c.key} label={c.label} count={list.length}>
+            <Column key={c.key} id={c.key} label={c.label} count={list.length} collapsed={!!hidden[c.key]} onToggle={() => toggle(c.key)}>
               {list.map((t) => (
                 <DraggableTask key={t.id} id={t.id}>
                   <TaskCard task={t} participants={goal.participants} goalDeadline={goal.deadline} />
@@ -242,14 +310,25 @@ function Board({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
   );
 }
 
-function Column({ id, label, count, children }: { id: string; label: string; count: number; children: ReactNode }) {
+function Column({ id, label, count, children, collapsed, onToggle }: { id: string; label: string; count: number; children: ReactNode; collapsed: boolean; onToggle: () => void }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div ref={setNodeRef} className={cn("rounded-2xl border bg-panel/60 p-3 transition", isOver && "border-primary bg-primary/10")}>
       <h3 className="mb-3 px-1 text-sm font-semibold tracking-wide uppercase">
-        {label} <span className="text-muted-foreground">({count})</span>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={!collapsed}
+          aria-label={`${collapsed ? "Show" : "Hide"} ${label} tasks`}
+          className="flex w-full items-center justify-between gap-2 text-left md:pointer-events-none"
+        >
+          <span>
+            {label} <span className="text-muted-foreground">({count})</span>
+          </span>
+          <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform md:hidden", collapsed && "-rotate-90")} />
+        </button>
       </h3>
-      <div className="min-h-16 space-y-3">{children}</div>
+      <div className={cn("min-h-16 space-y-3", collapsed && "hidden md:block")}>{children}</div>
     </div>
   );
 }

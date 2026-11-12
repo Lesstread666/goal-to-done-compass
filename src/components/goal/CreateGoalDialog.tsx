@@ -1,3 +1,4 @@
+import type React from "react";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => void }) {
+export function CreateGoalDialog({ onCreated, className, icon, iconOnly, variant = "default" }: { onCreated: (id: string) => void; className?: string; icon?: React.ReactNode; iconOnly?: boolean; variant?: "default" | "outline" }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -83,8 +84,9 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
   return (
     <Dialog open={open} onOpenChange={(o) => !m.isPending && setOpen(o)}>
       <DialogTrigger asChild>
-        <Button className="glow">
-          <Plus /> New goal project
+        <Button variant={variant} className={className ?? "glow"} aria-label={iconOnly ? "New goal project" : undefined}>
+          {icon ?? <Plus />}
+          {iconOnly ? null : "New goal project"}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -149,7 +151,7 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
             <Label htmlFor="g-desc">Description</Label>
             <Textarea id="g-desc" rows={4} placeholder="What does done look like?" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label id="g-count-label">Participants</Label>
               <div className="flex items-center gap-2" role="group" aria-labelledby="g-count-label">

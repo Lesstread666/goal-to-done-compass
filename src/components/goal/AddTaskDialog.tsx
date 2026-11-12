@@ -13,7 +13,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 
 const emptyDraft = { title: "", description: "", deadline: "", priority: "medium" as Task["priority"], assignee: null as string | null };
 
-export function AddTaskDialog({ goalId, tasks, participants, goalDeadline }: { goalId: string; tasks: Task[]; participants?: Participant[] | null | undefined; goalDeadline?: string | null | undefined }) {
+export function AddTaskDialog({ goalId, tasks, participants, goalDeadline, className }: { className?: string; goalId: string; tasks: Task[]; participants?: Participant[] | null | undefined; goalDeadline?: string | null | undefined }) {
   const team = participants ?? [];
   const maxDate = maxTaskDeadline(goalDeadline);
   const [open, setOpen] = useState(false);
@@ -39,7 +39,7 @@ export function AddTaskDialog({ goalId, tasks, participants, goalDeadline }: { g
   });
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
+      <Button className={className} onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4" /> Add Task
       </Button>
       <Dialog open={open} onOpenChange={(v) => { if (!add.isPending) setOpen(v); }}>
