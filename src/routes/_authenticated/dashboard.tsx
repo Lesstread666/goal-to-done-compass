@@ -222,7 +222,7 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
         )}
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <div className="relative w-full sm:min-w-48 sm:flex-1">
+          <div className="relative w-full sm:w-56 md:w-64">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Search tasks" className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
@@ -232,6 +232,7 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
               <TabsTrigger value="team">By teammate</TabsTrigger>
             </TabsList>
           </Tabs>
+          <div className="hidden flex-1 md:block" />
           <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} goalDeadline={goal.deadline} className="hidden glow md:inline-flex" />
         </div>
 
