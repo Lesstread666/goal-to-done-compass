@@ -9,7 +9,7 @@ export async function autoReplan(qc: QueryClient, goalId: string) {
   const { data, error } = await supabase.from("tasks").select("*").eq("goal_id", goalId);
   if (error || !data) return;
   const goal = qc.getQueryData<Goal[]>(["goals"])?.find((g) => g.id === goalId);
-  const patches = replanTasks(data as unknown as Task[], goal?.deadline ?? null, todayStr());
+  const patches = replanTasks(data as unknown as Task[], goal?.deadline ?? null, todayStr(), goal?.participants.map((p) => p.name));
   if (!patches.length) return;
   const results = await Promise.all(
     patches.map((p) => supabase.from("tasks").update({ deadline: p.deadline, priority: p.priority }).eq("id", p.id)),

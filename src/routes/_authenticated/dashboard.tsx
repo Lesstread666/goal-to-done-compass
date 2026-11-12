@@ -9,7 +9,8 @@ import { AppNav } from "@/components/social/AppNav";
 import { InvitesBanner } from "@/components/social/InvitesBanner";
 import { InviteDialog } from "@/components/goal/InviteDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { goalsQuery, tasksQuery, isDelayed, initials, type Task, type Goal } from "@/lib/goals";
+import { goalsQuery, tasksQuery, isDelayed, initials, todayStr, type Task, type Goal } from "@/lib/goals";
+import { getTeamWorkload } from "@/lib/workload";
 import { CreateGoalDialog } from "@/components/goal/CreateGoalDialog";
 import { TaskCard } from "@/components/goal/TaskCard";
 import { InsightsPanel } from "@/components/goal/InsightsPanel";
@@ -97,6 +98,7 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
   const [view, setView] = useState<"board" | "team">("board");
   const filtered = tasks.filter((t) => (t.title + t.description + (t.assignee ?? "")).toLowerCase().includes(q.toLowerCase()));
   const delayedCount = tasks.filter((t) => isDelayed(t)).length;
+  const workload = getTeamWorkload(tasks, goal.participants.map((p) => p.name), goal.deadline, todayStr());
 
   return (
     <div className="grid gap-6 p-4 md:p-8 xl:grid-cols-[1fr_300px]">
@@ -163,12 +165,17 @@ function GoalView({ goal, goals, onSelect }: { goal: Goal; goals: Goal[]; onSele
           <div className="mt-5 space-y-4">
             {goal.participants.map((p) => {
               const mine = filtered.filter((t) => t.assignee === p.name);
+              const load = workload.find((item) => item.name === p.name);
               return (
                 <div key={p.name} className="rounded-2xl border bg-panel/60 p-3">
                   <div className="mb-3 flex items-center gap-2 px-1">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">{initials(p.name)}</span>
                     <div>
-                      <div className="text-sm font-semibold">{p.name}</div>
+                      <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                        {p.name}
+                        <span className="text-xs font-normal text-muted-foreground">{load?.openCount ?? 0} open</span>
+                        {load?.overloaded && <span title="Overloaded: uneven task load or less than 3 days per open task" className="flex items-center gap-1 text-xs text-warning"><AlertTriangle className="h-3 w-3" />Overloaded</span>}
+                      </div>
                       <div className="text-xs text-muted-foreground">{p.role}</div>
                     </div>
                   </div>
