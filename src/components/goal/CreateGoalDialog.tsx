@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function CreateGoalDialog({ onCreated, className, icon }: { onCreated: (id: string) => void; className?: string; icon?: React.ReactNode }) {
+export function CreateGoalDialog({ onCreated, className, icon, iconOnly, variant = "default" }: { onCreated: (id: string) => void; className?: string; icon?: React.ReactNode; iconOnly?: boolean; variant?: "default" | "outline" }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -84,8 +84,9 @@ export function CreateGoalDialog({ onCreated, className, icon }: { onCreated: (i
   return (
     <Dialog open={open} onOpenChange={(o) => !m.isPending && setOpen(o)}>
       <DialogTrigger asChild>
-        <Button className={className ?? "glow"}>
-          {icon ?? <Plus />} New goal project
+        <Button variant={variant} className={className ?? "glow"} aria-label={iconOnly ? "New goal project" : undefined}>
+          {icon ?? <Plus />}
+          {iconOnly ? null : "New goal project"}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">

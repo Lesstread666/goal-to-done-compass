@@ -14,11 +14,12 @@ export function GoalStatusIcon({ status, className }: { status: GoalStatus; clas
   return <Icon aria-label={label} className={cn("h-4 w-4 shrink-0", text, className)} />;
 }
 
-export function GoalStatusBadge({ status, title }: { status: GoalStatus; title?: string }) {
+export function GoalStatusBadge({ status, title, detail }: { status: GoalStatus; title?: string; detail?: string | undefined }) {
   const s = statusStyle[status];
   return (
     <span title={title} className={cn("inline-flex items-center gap-1 rounded-full border border-current/40 px-2 py-0.5 text-xs font-semibold", s.text)}>
       <s.Icon className="h-3.5 w-3.5" /> {s.label}
+      {detail && <> · {detail}</>}
     </span>
   );
 }
