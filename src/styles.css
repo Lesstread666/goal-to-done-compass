@@ -51,6 +51,7 @@
 }
 
 :root {
+  color-scheme: dark;
   --radius: 0.85rem;
   --background: oklch(0.17 0.012 220);
   --foreground: oklch(0.95 0.01 200);
@@ -106,6 +107,26 @@
   }
   h1, h2, h3 {
     font-family: var(--font-display);
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.85;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    transition: opacity 150ms, background-color 150ms;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    background-color: var(--muted);
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
   }
 }
 

@@ -57,6 +57,13 @@
       "when": 1794410452880,
       "tag": "0007_retire_plan_review",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794489221962,
+      "tag": "0008_restrict_profiles_and_avatars",
+      "breakpoints": true
     }
   ]
 }

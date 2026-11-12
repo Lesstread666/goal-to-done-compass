@@ -30,9 +30,9 @@ export const profileByUsernameQuery = (username: string) =>
   queryOptions({
     queryKey: ["profile", username],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").eq("username", normalizeUsername(username)).maybeSingle();
+      const { data, error } = await supabase.rpc("profile_by_username", { p_username: normalizeUsername(username) });
       if (error) throw error;
-      return (data as Profile | null) ?? null;
+      return ((data ?? [])[0] as Profile | undefined) ?? null;
     },
   });
 
@@ -57,13 +57,11 @@ export const invitesQuery = () =>
   });
 
 export async function searchProfiles(term: string, excludeId?: string | null) {
-  const q = normalizeUsername(term).replace(/[%_\\]/g, (c) => `\\${c}`);
+  const q = normalizeUsername(term);
   if (q.length < 1) return [] as Profile[];
-  let req = supabase.from("profiles").select("*").ilike("username", `%${q}%`).order("username").limit(8);
-  if (excludeId) req = req.neq("id", excludeId);
-  const { data, error } = await req;
+  const { data, error } = await supabase.rpc("search_profiles", { p_term: q });
   if (error) throw error;
-  return (data ?? []) as Profile[];
+  return ((data ?? []) as Profile[]).filter((p) => p.id !== excludeId);
 }
 
 export async function addContact(contactId: string) {

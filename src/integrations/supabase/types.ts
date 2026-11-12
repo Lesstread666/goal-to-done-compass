@@ -373,6 +373,7 @@ export type Database = {
     }
     Functions: {
       accept_goal_invite: { Args: { p_invite_id: string }; Returns: string }
+      can_see_profile: { Args: { p_id: string }; Returns: boolean }
       edit_goal_team: {
         Args: {
           p_assignments: Json
@@ -396,6 +397,38 @@ export type Database = {
           inviter_avatar: string
           inviter_username: string
         }[]
+      }
+      profile_by_username: {
+        Args: { p_username: string }
+        Returns: {
+          avatar_url: string | null
+          bio: string
+          created_at: string
+          id: string
+          username: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      search_profiles: {
+        Args: { p_term: string }
+        Returns: {
+          avatar_url: string | null
+          bio: string
+          created_at: string
+          id: string
+          username: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       username_available: { Args: { p_username: string }; Returns: boolean }
     }

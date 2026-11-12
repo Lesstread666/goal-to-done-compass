@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { EditTaskDialog } from "@/components/goal/EditTaskDialog";
 import { DeleteDialog } from "@/components/goal/DeleteDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { initials, isDelayed, type Task, type Participant } from "@/lib/goals";
+import { initials, isDelayed, maxTaskDeadline, type Task, type Participant } from "@/lib/goals";
 import { cn } from "@/lib/utils";
 import { autoReplan } from "@/lib/replan-apply";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,8 +15,9 @@ const prio = {
   low: "bg-accent text-accent-foreground",
 };
 
-export function TaskCard({ task, participants = [] }: { task: Task; participants?: Participant[] | null }) {
+export function TaskCard({ task, participants = [], goalDeadline }: { task: Task; participants?: Participant[] | null; goalDeadline?: string | null | undefined }) {
   const qc = useQueryClient();
+  const maxDate = maxTaskDeadline(goalDeadline);
   const delayed = isDelayed(task);
   const update = useMutation({
     mutationFn: async (patch: Partial<Task>) => {
@@ -37,7 +38,7 @@ export function TaskCard({ task, participants = [] }: { task: Task; participants
         <h4 className={cn("min-w-0 flex-1 break-words text-sm font-semibold leading-snug", task.status === "done" && "text-muted-foreground line-through")}>{task.title}</h4>
       </div>
       <div className="flex justify-end gap-1">
-        <EditTaskDialog task={task} participants={participants} />
+        <EditTaskDialog task={task} participants={participants} goalDeadline={goalDeadline} />
         <DeleteDialog label="Delete task" description={`Remove “${task.title}” from this project.`} onDelete={async () => {
           const { error } = await supabase.from("tasks").delete().eq("id", task.id).select("id").single();
           if (error) throw error;
@@ -58,8 +59,16 @@ export function TaskCard({ task, participants = [] }: { task: Task; participants
             type="date"
             aria-label="Task deadline"
             className="w-[7.2rem] bg-transparent outline-none [color-scheme:dark]"
+            max={maxDate}
             value={task.deadline ?? ""}
-            onChange={(e) => update.mutate({ deadline: e.target.value || null })}
+            onChange={(e) => {
+              const value = e.target.value || null;
+              if (value && maxDate && value > maxDate) {
+                toast.error("Task deadline must be before the project deadline.");
+                return;
+              }
+              update.mutate({ deadline: value });
+            }}
           />
         </label>
         {task.assignee && (
