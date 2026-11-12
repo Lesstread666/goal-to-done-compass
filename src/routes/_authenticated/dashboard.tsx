@@ -4,7 +4,8 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { DndContext, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { z } from "zod";
-import { ListChecks, Search, Target, AlertTriangle } from "lucide-react";
+import { ListChecks, Search, Target, AlertTriangle, Layers, Trash2, CalendarDays, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { AppNav } from "@/components/social/AppNav";
 import { InvitesBanner } from "@/components/social/InvitesBanner";
 import { InviteDialog } from "@/components/goal/InviteDialog";
@@ -151,25 +152,33 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
         </div>
         <div className="mb-4"><InvitesBanner onJoined={onSelect} /></div>
         <div className="text-sm text-muted-foreground">Goal projects › <span className="text-foreground">{goal.title}</span></div>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold md:text-3xl">{goal.title}</h1>
-              {info && <GoalStatusBadge status={info.status} title={info.reason} />}
-            </div>
-            {goal.deadline && <p className="mt-1 text-sm text-muted-foreground">Deadline {new Date(goal.deadline).toLocaleDateString()}</p>}
-          </div>
+        <div className="mt-2 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <InviteDialog goal={goal} />
-            <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} />
-            <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} onDelete={async () => {
+            <h1 className="min-w-0 text-2xl font-bold break-words md:text-3xl">{goal.title}</h1>
+            {info && <GoalStatusBadge status={info.status} title={info.reason} />}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
+            {goal.deadline && <span className="flex items-center gap-1.5"><CalendarDays className="h-4 w-4" />Deadline {new Date(goal.deadline).toLocaleDateString()}</span>}
+            <span className="flex items-center gap-1.5"><Users className="h-4 w-4" />{goal.participants.length} member{goal.participants.length === 1 ? "" : "s"}</span>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border bg-panel/60 p-2 sm:flex sm:flex-wrap sm:items-center xl:flex-nowrap [&_button]:sm:h-9 [&_button]:sm:px-3">
+          <InviteDialog goal={goal} className="w-full sm:w-auto" />
+          <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} className="w-full sm:w-auto" />
+          <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} goalDeadline={goal.deadline} className="col-span-2 w-full glow sm:w-auto" />
+          <CreateGoalDialog onCreated={onSelect} icon={<Layers />} className="col-span-2 w-full border border-primary bg-transparent text-primary hover:bg-primary/10 sm:w-auto" />
+          <div className="col-span-2 sm:ml-auto sm:flex sm:items-center sm:gap-2">
+            <span className="hidden h-6 w-px bg-border xl:block" />
+            <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} trigger={(open) => (
+              <Button variant="outline" onClick={open} className="w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive sm:w-auto"><Trash2 />Delete project</Button>
+            )} onDelete={async () => {
               const { error } = await supabase.from("goals").delete().eq("id", goal.id).select("id").single();
               if (error) throw error;
               qc.removeQueries({ queryKey: ["tasks", goal.id] });
               await qc.invalidateQueries({ queryKey: ["goals"] });
               onSelect(goals.find((g) => g.id !== goal.id)?.id ?? "");
             }} />
-            <CreateGoalDialog onCreated={onSelect} />
           </div>
         </div>
 
@@ -198,20 +207,16 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
         )}
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <div className="relative min-w-48 flex-1">
+          <div className="relative w-full sm:min-w-48 sm:flex-1">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Search tasks" className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
-          <Tabs value={view} onValueChange={(v) => setView(v as "board" | "team")}>
-            <TabsList>
+          <Tabs value={view} onValueChange={(v) => setView(v as "board" | "team")} className="w-full sm:w-auto">
+            <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
               <TabsTrigger value="board">Board</TabsTrigger>
               <TabsTrigger value="team">By teammate</TabsTrigger>
             </TabsList>
           </Tabs>
-        </div>
-
-        <div className="mt-3">
-          <AddTaskDialog goalId={goal.id} tasks={tasks} participants={goal.participants} goalDeadline={goal.deadline} />
         </div>
 
         {isLoading ? (

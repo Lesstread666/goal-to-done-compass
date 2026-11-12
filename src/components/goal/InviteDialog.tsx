@@ -30,7 +30,7 @@ export const goalPeopleQuery = (goalId: string) => ({
   },
 });
 
-export function InviteDialog({ goal }: { goal: Goal }) {
+export function InviteDialog({ goal, className }: { goal: Goal; className?: string }) {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
   const { data } = useQuery(goalPeopleQuery(goal.id));
@@ -52,7 +52,7 @@ export function InviteDialog({ goal }: { goal: Goal }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline"><UserPlus /> Invite</Button>
+        <Button variant="outline" className={className}><UserPlus /> Invite</Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>

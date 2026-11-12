@@ -1,3 +1,4 @@
+import type React from "react";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => void }) {
+export function CreateGoalDialog({ onCreated, className, icon }: { onCreated: (id: string) => void; className?: string; icon?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -83,8 +84,8 @@ export function CreateGoalDialog({ onCreated }: { onCreated: (id: string) => voi
   return (
     <Dialog open={open} onOpenChange={(o) => !m.isPending && setOpen(o)}>
       <DialogTrigger asChild>
-        <Button className="glow">
-          <Plus /> New goal project
+        <Button className={className ?? "glow"}>
+          {icon ?? <Plus />} New goal project
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">

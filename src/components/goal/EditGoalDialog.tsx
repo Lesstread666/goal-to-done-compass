@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export function EditGoalDialog({ goal, tasks, loading }: { goal: Goal; tasks: Task[]; loading: boolean }) {
+export function EditGoalDialog({ goal, tasks, loading, className }: { className?: string; goal: Goal; tasks: Task[]; loading: boolean }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(goal.title);
   const [description, setDescription] = useState(goal.description);
@@ -49,7 +49,7 @@ export function EditGoalDialog({ goal, tasks, loading }: { goal: Goal; tasks: Ta
     setAssignments((prev) => Object.fromEntries(Object.entries(prev).map(([id, assignee]) => [id, assignee === name ? null : assignee])));
   }
   return <>
-    <Button variant="outline" disabled={loading} onClick={() => { setTitle(goal.title); setDescription(goal.description); setDeadline(goal.deadline ?? ""); setParticipants(goal.participants.map((p) => ({ ...p }))); setAssignments(reconcileAssignments(tasks, goal.participants)); setOpen(true); }}><Pencil className="h-4 w-4" />Edit project</Button>
+    <Button variant="outline" className={className} disabled={loading} onClick={() => { setTitle(goal.title); setDescription(goal.description); setDeadline(goal.deadline ?? ""); setParticipants(goal.participants.map((p) => ({ ...p }))); setAssignments(reconcileAssignments(tasks, goal.participants)); setOpen(true); }}><Pencil className="h-4 w-4" />Edit project</Button>
     <Dialog open={open} onOpenChange={(v) => { if (!save.isPending) setOpen(v); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader><DialogTitle>Edit project</DialogTitle><DialogDescription>{goal.title}</DialogDescription></DialogHeader>
