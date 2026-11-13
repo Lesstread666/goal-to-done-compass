@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, MessageCircle, Send, X } from "lucide-react";
 import { toast } from "sonner";
@@ -9,9 +10,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/social/UserAvatar";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-export function ProjectChat({ goalId, children }: { goalId: string; children: React.ReactNode }) {
+const ChatContext = createContext<{ open: () => void; count: number } | null>(null);
+
+export function MobileProjectChatButton() {
+  const chat = useContext(ChatContext);
+  if (!chat) return null;
+  return <div className="min-w-0 text-center md:hidden">
+    <Button size="icon" variant="outline" onClick={chat.open} title="Open project chat" aria-label={chat.count ? `Open project chat, ${chat.count} unread messages` : "Open project chat"} className="relative mx-auto h-11 w-11 rounded-full border-primary/60 text-primary">
+      <MessageCircle className="h-5 w-5" />
+      {chat.count > 0 && <span className="absolute -top-1 -right-1 min-w-5 rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground ring-2 ring-background">{chat.count > 99 ? "99+" : chat.count}</span>}
+    </Button>
+  </div>;
+}
+
+export function ProjectChat({ goalId, title, team, children }: { goalId: string; title: string; team: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const mobile = useIsMobile();
   const qc = useQueryClient();
   const unread = useQuery(projectUnreadQuery(goalId));
   useEffect(() => {
@@ -23,10 +39,13 @@ export function ProjectChat({ goalId, children }: { goalId: string; children: Re
     return () => { void supabase.removeChannel(channel); };
   }, [goalId, qc]);
   const count = unread.data ?? 0;
-  return <>
+  return <ChatContext.Provider value={{ open: () => setOpen(true), count }}>
+    {team}
     <div className="relative">
-      <div className={cn("space-y-5", open && "md:invisible")} aria-hidden={open || undefined}>{children}</div>
-      {open && <ChatConversation goalId={goalId} onClose={() => setOpen(false)} />}
+      <div className={cn("space-y-5", open && !mobile && "md:invisible")} aria-hidden={(open && !mobile) || undefined}>{children}</div>
+      {open && (mobile
+        ? createPortal(<ChatConversation goalId={goalId} title={title} mobile onClose={() => setOpen(false)} />, document.body)
+        : <ChatConversation goalId={goalId} title={title} mobile={false} onClose={() => setOpen(false)} />)}
     </div>
     <Button variant="outline" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="project-chat-panel" className={cn("hidden h-auto w-full justify-between rounded-lg p-3 text-left md:flex", count > 0 && "border-primary/70")}>
       <span className="flex min-w-0 items-center gap-2">
@@ -38,10 +57,40 @@ export function ProjectChat({ goalId, children }: { goalId: string; children: Re
       </span>
       {open ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
     </Button>
-  </>;
+  </ChatContext.Provider>;
 }
 
-function ChatConversation({ goalId, onClose }: { goalId: string; onClose: () => void }) {
+function ChatConversation({ goalId, title, mobile, onClose }: { goalId: string; title: string; mobile: boolean; onClose: () => void }) {
+  const panel = useRef<HTMLElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!mobile) return;
+    const previousFocus = document.activeElement;
+    const previousScroll = window.scrollY;
+    const previousOverflow = document.body.style.overflow;
+    const siblings = [...document.body.children].filter((node) => node !== panel.current);
+    const oldInert = siblings.map((node) => node.hasAttribute("inert"));
+    siblings.forEach((node) => node.setAttribute("inert", ""));
+    document.body.style.overflow = "hidden";
+    closeButton.current?.focus({ preventScroll: true });
+    const viewport = window.visualViewport;
+    const resize = () => {
+      if (!panel.current || !viewport) return;
+      panel.current.style.height = `${viewport.height}px`;
+      panel.current.style.top = `${viewport.offsetTop}px`;
+    };
+    resize();
+    viewport?.addEventListener("resize", resize);
+    viewport?.addEventListener("scroll", resize);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      siblings.forEach((node, index) => { if (!oldInert[index]) node.removeAttribute("inert"); });
+      viewport?.removeEventListener("resize", resize);
+      viewport?.removeEventListener("scroll", resize);
+      if (previousFocus instanceof HTMLElement) previousFocus.focus({ preventScroll: true });
+      window.scrollTo({ top: previousScroll, behavior: "instant" });
+    };
+  }, [mobile]);
   const qc = useQueryClient();
   const { data: me } = useQuery(meQuery());
   const messages = useQuery(projectMessagesQuery(goalId));
@@ -109,11 +158,18 @@ function ChatConversation({ goalId, onClose }: { goalId: string; onClose: () => 
     atBottom.current = true;
     await qc.invalidateQueries({ queryKey: ["project-chat-messages", goalId] });
   }
-  return <section id="project-chat-panel" aria-label="Project chat" className="absolute inset-0 z-10 hidden min-h-0 flex-col overflow-hidden rounded-lg border bg-panel md:flex">
-    <header className="flex shrink-0 items-center gap-2 border-b p-3">
+  return <section ref={panel} id="project-chat-panel" aria-label="Project chat" role={mobile ? "dialog" : "region"} aria-modal={mobile || undefined} className={cn("flex min-h-0 flex-col overflow-hidden bg-panel", mobile ? "fixed inset-x-0 top-0 z-[100] h-dvh" : "absolute inset-0 z-10 rounded-lg border")} onKeyDown={(e) => {
+    if (!mobile || e.key !== "Tab") return;
+    const controls = panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]');
+    const first = controls?.[0];
+    const last = controls?.[controls.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+  }}>
+    <header className="flex shrink-0 items-center gap-2 border-b p-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
       <MessageCircle className="h-5 w-5 text-primary" />
-      <div className="min-w-0 flex-1"><h3 className="text-sm font-semibold">Project chat</h3><p className="text-xs text-muted-foreground">{members.data?.length ?? "…"} project members</p></div>
-      <Button variant="ghost" size="icon" className="h-8 w-8" title="Close project chat" aria-label="Close project chat" onClick={onClose}><X className="h-4 w-4" /></Button>
+      <div className="min-w-0 flex-1"><h3 className="text-sm font-semibold">Project chat</h3>{mobile && <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground [overflow-wrap:anywhere]">{title}</p>}<p className="text-xs text-muted-foreground">{members.data?.length ?? "…"} project members</p></div>
+      <Button ref={closeButton} variant="ghost" size="icon" className="h-11 w-11 shrink-0 md:h-8 md:w-8" title="Close project chat" aria-label="Close project chat" onClick={onClose}><X className="h-4 w-4" /></Button>
     </header>
     <div ref={scroller} role="log" aria-label="Project messages" className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3" onScroll={() => {
       const box = scroller.current;
@@ -136,8 +192,8 @@ function ChatConversation({ goalId, onClose }: { goalId: string; onClose: () => 
         </div>;
       })}
     </div>
-    <form onSubmit={send} className="flex shrink-0 gap-2 border-t p-3">
-      <Input aria-label="Project message" placeholder="Message your project…" maxLength={2000} value={text} onChange={(e) => setText(e.target.value)} className="min-w-0 text-xs" />
+    <form onSubmit={send} className="flex shrink-0 gap-2 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <Input aria-label="Project message" placeholder="Message your project…" maxLength={2000} value={text} onChange={(e) => setText(e.target.value)} className="min-w-0 text-base md:text-xs" />
       <Button size="icon" type="submit" title="Send message" aria-label="Send project message" disabled={!text.trim() || !me || sending}><Send className="h-4 w-4" /></Button>
     </form>
   </section>;
