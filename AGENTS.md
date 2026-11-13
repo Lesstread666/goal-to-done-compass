@@ -18,6 +18,7 @@
 - Projects are shared through `goal_members` (owner row added by trigger); goal/task RLS uses `is_goal_member`, and joining only happens via the `accept_goal_invite` function — keeps access invite-only and atomic.
 - Profiles (username, avatar, bio) are created by an `auth.users` trigger from signup metadata; avatars live in a private bucket and are stored as long-lived signed URLs because the workspace blocks public buckets.
 - Direct messages use the `messages` table with Realtime; teammates are per-user `team_contacts` rows.
+- Sidebar Dashboard unread totals reuse per-project chat queries/read cursors across all accessible goals; Teams totals combine private and team-group chats independently, with polling fallback — keeps badges synchronized without schema changes.
 - Project group chat shares member-scoped messages and per-user monotonic read cursors across viewports with Realtime and polling fallback; desktop overlays only charts, while mobile opens a body-portaled full-screen dialog from the team row with scroll lock, focus containment and an explicit close control.
 - The Goal Clarifier (`clarifyGoal` in `src/lib/plan-core.ts`) is stateless: the dialog sends the whole chat each round and passes the confirmed summary to the planner as `context` — no database storage needed.
 - Derive project-local teammate load in `src/lib/workload.ts` for both reassessment and overload flags; use open task counts because effort and availability are not stored, and never change assignments during reassessment.

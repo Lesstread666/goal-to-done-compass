@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { useUnread } from "@/lib/unread";
+import { useProjectUnread } from "@/lib/project-chat";
 import { LayoutGrid, ListChecks, LogOut, UserRound, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,10 +28,13 @@ export function AppNav() {
   const signOut = useSignOut();
   const path = useLocation({ select: (l) => l.pathname });
   const { total } = useUnread({ notify: path !== "/teams", notifyGroups: true });
-  const badge = (to: string) =>
-    to === "/teams" && total > 0 ? (
-      <span aria-label={`${total} unread messages`} className="absolute -top-1 right-1/2 translate-x-4 rounded-full bg-destructive px-1.5 text-[10px] leading-4 font-bold text-destructive-foreground">{total > 9 ? "9+" : total}</span>
+  const projectTotal = useProjectUnread();
+  const badge = (to: string) => {
+    const count = to === "/dashboard" ? projectTotal : to === "/teams" ? total : 0;
+    return count > 0 ? (
+      <span aria-label={`${count} unread ${to === "/dashboard" ? "project" : "team"} messages`} className="absolute -top-1 right-1/2 min-w-4 translate-x-4 rounded-full bg-destructive px-1 text-center text-[10px] leading-4 font-bold text-destructive-foreground">{count > 99 ? "99+" : count}</span>
     ) : null;
+  };
   const cls = "flex flex-col items-center gap-1 text-xs";
   return (
     <>
