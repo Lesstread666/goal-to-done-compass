@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export type Participant = { name: string; role: string };
 export type Goal = {
   id: string;
+  user_id: string;
   title: string;
   description: string;
   deadline: string | null;

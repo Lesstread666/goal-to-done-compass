@@ -13,6 +13,7 @@
 - AI returns effort, phases and dependencies only; `src/lib/plan-schedule.ts` deterministically sets deadlines, priorities and balance — keeps plans within the deadline and testable.
 - Goals/tasks are read and updated from the browser via the Supabase client under per-user RLS; "delayed" is derived (`isDelayed` in `src/lib/goals.ts`), never stored — avoids scheduled jobs.
 - Goal and participant edits use the invoker-rights `edit_goal_team` database function so participant changes and task assignments persist atomically under owner RLS; task editing and confirmed deletions use the browser client.
+- Project edit/delete controls use the authenticated identity and immutable creator ID; database policies enforce creator-only writes, while task writes remain membership-scoped, so hiding controls is not the security boundary.
 - The assistant (MCP) server lives in `src/lib/mcp/` with OAuth via the backend auth issuer; tools use the caller-scoped client so RLS limits them to the caller's goals, and AI planning is shared via `src/lib/plan-core.ts`.
 - Projects are shared through `goal_members` (owner row added by trigger); goal/task RLS uses `is_goal_member`, and joining only happens via the `accept_goal_invite` function — keeps access invite-only and atomic.
 - Profiles (username, avatar, bio) are created by an `auth.users` trigger from signup metadata; avatars live in a private bucket and are stored as long-lived signed URLs because the workspace blocks public buckets.
