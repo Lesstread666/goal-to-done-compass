@@ -3,6 +3,7 @@ import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { currentUserId } from "@/lib/social";
+import { groupsQuery } from "@/lib/group-chat";
 
 /** Unread message counts keyed by sender id. */
 export const unreadQuery = () =>
@@ -42,7 +43,9 @@ export function useUnread(opts: { notify?: boolean } = {}) {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [qc, opts.notify]);
+  const groups = useQuery(groupsQuery());
   const counts = q.data ?? {};
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const groupUnread = (groups.data ?? []).reduce((a, g) => a + g.unread, 0);
+  const total = Object.values(counts).reduce((a, b) => a + b, 0) + groupUnread;
   return { counts, total };
 }

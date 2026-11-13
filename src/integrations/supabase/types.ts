@@ -14,6 +14,146 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_group_members: {
+        Row: {
+          group_id: string
+          joined_at: string
+          last_read_id: number
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          joined_at?: string
+          last_read_id?: number
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          joined_at?: string
+          last_read_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "chat_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_group_messages: {
+        Row: {
+          attachment_name: string | null
+          attachment_path: string | null
+          attachment_size: number | null
+          attachment_type: string | null
+          body: string
+          created_at: string
+          group_id: string
+          id: number
+          sender_id: string
+        }
+        Insert: {
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_size?: number | null
+          attachment_type?: string | null
+          body?: string
+          created_at?: string
+          group_id: string
+          id?: never
+          sender_id?: string
+        }
+        Update: {
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_size?: number | null
+          attachment_type?: string | null
+          body?: string
+          created_at?: string
+          group_id?: string
+          id?: never
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_group_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "chat_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_group_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          group_id: string
+          message_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          group_id: string
+          message_id: number
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          group_id?: string
+          message_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_group_reactions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "chat_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_group_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_group_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_groups: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
       deleted_tasks: {
         Row: {
           assignee: string | null
@@ -599,7 +739,15 @@ export type Database = {
     }
     Functions: {
       accept_goal_invite: { Args: { p_invite_id: string }; Returns: string }
+      add_group_member: {
+        Args: { p_group: string; p_user: string }
+        Returns: undefined
+      }
       can_see_profile: { Args: { p_id: string }; Returns: boolean }
+      create_group_chat: {
+        Args: { p_members: string[]; p_name: string }
+        Returns: string
+      }
       edit_goal_team: {
         Args: {
           p_assignments: Json
@@ -611,11 +759,32 @@ export type Database = {
         }
         Returns: undefined
       }
+      is_chat_member: { Args: { p_group: string }; Returns: boolean }
       is_goal_member: { Args: { p_goal_id: string }; Returns: boolean }
+      leave_group_chat: { Args: { p_group: string }; Returns: undefined }
+      mark_group_read: {
+        Args: { p_group: string; p_message_id: number }
+        Returns: undefined
+      }
       mark_messages_read: { Args: { p_sender: string }; Returns: undefined }
       mark_project_chat_read: {
         Args: { p_goal_id: string; p_message_id: number }
         Returns: undefined
+      }
+      my_group_chats: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          last_at: string
+          last_body: string
+          last_has_attachment: boolean
+          last_sender: string
+          member_count: number
+          name: string
+          owner_id: string
+          unread: number
+        }[]
       }
       my_pending_invites: {
         Args: never
@@ -645,6 +814,14 @@ export type Database = {
         }
       }
       project_chat_unread: { Args: { p_goal_id: string }; Returns: number }
+      remove_group_member: {
+        Args: { p_group: string; p_user: string }
+        Returns: undefined
+      }
+      rename_group_chat: {
+        Args: { p_group: string; p_name: string }
+        Returns: undefined
+      }
       restore_deleted_task: {
         Args: { p_deadline: string; p_deleted_id: string }
         Returns: string
