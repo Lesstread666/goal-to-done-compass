@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { DndContext, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
@@ -27,6 +27,7 @@ import { GoalStatusBadge, GoalStatusIcon, statusStyle } from "@/components/goal/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { meQuery } from "@/lib/social";
 import { canManageProject } from "@/lib/project-permissions";
+import { projectUnreadQuery } from "@/lib/project-chat";
 
 function useGoalStatuses(goals: Goal[], activeId?: string) {
   const { data: activeTasks } = useQuery({ ...tasksQuery(activeId ?? ""), enabled: !!activeId });
@@ -45,6 +46,11 @@ function useGoalStatuses(goals: Goal[], activeId?: string) {
 }
 
 const statusTitle = (i?: GoalStatusInfo) => (i ? `${statusStyle[i.status].label}: ${i.reason}` : undefined);
+
+function ProjectUnreadBadge({ count, title }: { count: number; title: string }) {
+  if (count <= 0) return null;
+  return <span aria-label={`${count} unread messages in ${title}`} title={`${count} unread message${count === 1 ? "" : "s"}`} className="mt-0.5 min-w-5 shrink-0 rounded-full bg-destructive px-1.5 text-center text-[11px] leading-5 font-bold text-destructive-foreground">{count > 99 ? "99+" : count}</span>;
+}
 
 function GoalRowText({ title, info }: { title: string; info?: GoalStatusInfo | undefined }) {
   return (
@@ -93,6 +99,8 @@ function Dashboard() {
   const goal = goals.find((g) => g.id === goalParam) ?? goals[0];
   const select = (id: string) => navigate({ search: { goal: id } });
   const statuses = useGoalStatuses(goals, goal?.id);
+  const unreadQueries = useQueries({ queries: goals.map((g) => projectUnreadQuery(g.id)) });
+  const unread = Object.fromEntries(goals.map((g, index) => [g.id, unreadQueries[index]?.data ?? 0]));
 
   return (
     <div className="flex min-h-screen pb-20 md:pb-0">
@@ -102,18 +110,20 @@ function Dashboard() {
         <h2 className="mb-3 px-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">Goal projects</h2>
         <div className="space-y-1">
           {goals.map((g) => (
-            <button
+            <Button
+              variant="ghost"
               key={g.id}
               onClick={() => select(g.id)}
               title={statusTitle(statuses[g.id])}
               className={cn(
-                "flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-sm",
+                "flex h-auto w-full items-start justify-start gap-2 rounded-lg px-2 py-2 text-left text-sm font-normal whitespace-normal",
                 g.id === goal?.id ? "bg-accent text-accent-foreground" : "hover:bg-muted",
               )}
             >
               <GoalStatusIcon status={statuses[g.id]?.status ?? "on_track"} className="mt-0.5" />
               <GoalRowText title={g.title} info={statuses[g.id]} />
-            </button>
+              <ProjectUnreadBadge count={unread[g.id] ?? 0} title={g.title} />
+            </Button>
           ))}
           {!goals.length && <p className="px-2 text-sm text-muted-foreground">No goals yet.</p>}
         </div>
@@ -121,7 +131,7 @@ function Dashboard() {
 
       <div className="min-w-0 flex-1">
         {goal ? (
-          <GoalView goal={goal} goals={goals} onSelect={select} statuses={statuses} />
+          <GoalView goal={goal} goals={goals} onSelect={select} statuses={statuses} unread={unread} />
         ) : (
           <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
             <div className="w-full max-w-xl"><InvitesBanner onJoined={select} /></div>
@@ -136,7 +146,7 @@ function Dashboard() {
   );
 }
 
-function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal[]; onSelect: (id: string) => void; statuses: Partial<Record<string, GoalStatusInfo>> }) {
+function GoalView({ goal, goals, onSelect, statuses, unread }: { goal: Goal; goals: Goal[]; onSelect: (id: string) => void; statuses: Partial<Record<string, GoalStatusInfo>>; unread: Record<string, number> }) {
   const info = statuses[goal.id];
   const qc = useQueryClient();
   const { data: tasks = [], isLoading } = useQuery(tasksQuery(goal.id));
@@ -175,6 +185,7 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
                   <span className="flex min-w-0 items-start gap-2">
                     <GoalStatusIcon status={statuses[g.id]?.status ?? "on_track"} className="mt-0.5" />
                     <GoalRowText title={g.title} info={statuses[g.id]} />
+                    <ProjectUnreadBadge count={unread[g.id] ?? 0} title={g.title} />
                   </span>
                 </SelectItem>
               ))}

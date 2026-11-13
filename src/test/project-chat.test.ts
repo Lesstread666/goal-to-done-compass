@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { countProjectUnread, type ProjectMessage } from "@/lib/project-chat";
+import { countProjectUnread, totalProjectUnread, type ProjectMessage } from "@/lib/project-chat";
 
 const messages = [
   { id: 1, sender_id: "teammate" },
@@ -8,6 +8,15 @@ const messages = [
   { id: 4, sender_id: "another-member" },
 ].map((m) => ({ ...m, goal_id: "project", body: "Update", created_at: "2026-11-13T08:00:00Z" } as ProjectMessage));
 describe("project unread messages", () => {
+  it("adds unread messages across all dashboard projects, including unopened projects", () => {
+    expect(totalProjectUnread([2, 3, 1])).toBe(6);
+  });
+  it("decreases the sidebar total when a project is read without clearing other projects", () => {
+    expect(totalProjectUnread([2, 0, 1])).toBe(3);
+  });
+  it("has no badge count for read projects or projects still loading", () => {
+    expect(totalProjectUnread([0, undefined, 0])).toBe(0);
+  });
   it("counts messages from every other project member, not your own", () => {
     expect(countProjectUnread(messages, "me", 0)).toBe(3);
   });

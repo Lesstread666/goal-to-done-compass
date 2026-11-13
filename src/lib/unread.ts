@@ -9,6 +9,7 @@ import { groupsQuery } from "@/lib/group-chat";
 export const unreadQuery = () =>
   queryOptions({
     queryKey: ["unread"],
+    refetchInterval: 15000,
     queryFn: async () => {
       const me = await currentUserId();
       if (!me) return {} as Record<string, number>;

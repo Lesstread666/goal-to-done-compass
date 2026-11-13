@@ -1,5 +1,26 @@
-import { queryOptions } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { queryOptions, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { goalsQuery } from "@/lib/goals";
+
+export function totalProjectUnread(counts: (number | undefined)[]) {
+  return counts.reduce<number>((total, count) => total + (count ?? 0), 0);
+}
+
+/** Reuses each project's read cursor and cache, including projects not currently open. */
+export function useProjectUnread() {
+  const qc = useQueryClient();
+  const { data: goals = [] } = useQuery(goalsQuery());
+  const unread = useQueries({ queries: goals.map((goal) => projectUnreadQuery(goal.id)) });
+  useEffect(() => {
+    const channel = supabase.channel(`project-unread-${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "project_messages" }, () => {
+        void qc.invalidateQueries({ queryKey: ["project-chat-unread"] });
+      }).subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [qc]);
+  return totalProjectUnread(unread.map((query) => query.data));
+}
 
 export type ProjectMessage = { id: number; goal_id: string; sender_id: string; body: string; created_at: string };
 
