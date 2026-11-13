@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       deleted_tasks: {
         Row: {
+          assignee: string | null
           deadline: string | null
           deleted_at: string
           deleted_by: string | null
@@ -23,12 +24,16 @@ export type Database = {
           evaluated: boolean
           goal_id: string
           id: string
+          position: number | null
           priority: string
+          restored_at: string | null
+          restored_task_id: string | null
           status: string
           task_id: string
           title: string
         }
         Insert: {
+          assignee?: string | null
           deadline?: string | null
           deleted_at?: string
           deleted_by?: string | null
@@ -36,12 +41,16 @@ export type Database = {
           evaluated?: boolean
           goal_id: string
           id?: string
+          position?: number | null
           priority?: string
+          restored_at?: string | null
+          restored_task_id?: string | null
           status?: string
           task_id: string
           title: string
         }
         Update: {
+          assignee?: string | null
           deadline?: string | null
           deleted_at?: string
           deleted_by?: string | null
@@ -49,7 +58,10 @@ export type Database = {
           evaluated?: boolean
           goal_id?: string
           id?: string
+          position?: number | null
           priority?: string
+          restored_at?: string | null
+          restored_task_id?: string | null
           status?: string
           task_id?: string
           title?: string
@@ -403,14 +415,17 @@ export type Database = {
         Row: {
           created_at: string
           dedupe_key: string
+          deleted_id: string | null
           explanation: string
           from_priority: string | null
           goal_id: string
           id: string
           kind: string
+          proposal: Json | null
           resolved_at: string | null
           severity: string
           status: string
+          suggested_deadline: string | null
           task_id: string | null
           task_title: string
           title: string
@@ -419,14 +434,17 @@ export type Database = {
         Insert: {
           created_at?: string
           dedupe_key: string
+          deleted_id?: string | null
           explanation?: string
           from_priority?: string | null
           goal_id: string
           id?: string
           kind: string
+          proposal?: Json | null
           resolved_at?: string | null
           severity?: string
           status?: string
+          suggested_deadline?: string | null
           task_id?: string | null
           task_title?: string
           title: string
@@ -435,14 +453,17 @@ export type Database = {
         Update: {
           created_at?: string
           dedupe_key?: string
+          deleted_id?: string | null
           explanation?: string
           from_priority?: string | null
           goal_id?: string
           id?: string
           kind?: string
+          proposal?: Json | null
           resolved_at?: string | null
           severity?: string
           status?: string
+          suggested_deadline?: string | null
           task_id?: string | null
           task_title?: string
           title?: string
@@ -624,6 +645,10 @@ export type Database = {
         }
       }
       project_chat_unread: { Args: { p_goal_id: string }; Returns: number }
+      restore_deleted_task: {
+        Args: { p_deadline: string; p_deleted_id: string }
+        Returns: string
+      }
       search_profiles: {
         Args: { p_term: string }
         Returns: {

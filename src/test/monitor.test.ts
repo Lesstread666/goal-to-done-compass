@@ -46,3 +46,27 @@ describe("project monitor", () => {
     expect(r).toEqual([{ id: "a", deadline: "2026-11-14", priority: "medium" }]);
   });
 });
+
+import { restoreDeadline, validDeadlineSuggestions } from "@/lib/monitor";
+describe("task recovery and deadline suggestions", () => {
+  it("restore keeps a still-valid original deadline", () => {
+    expect(restoreDeadline("2026-11-20", "2026-11-13", "2026-12-01")).toEqual({ deadline: "2026-11-20", conflict: false });
+  });
+  it("restore flags a past deadline and proposes tomorrow", () => {
+    expect(restoreDeadline("2026-11-01", "2026-11-13", "2026-12-01")).toEqual({ deadline: "2026-11-14", conflict: true });
+  });
+  it("restore flags when no day fits before the project deadline", () => {
+    expect(restoreDeadline("2026-11-01", "2026-11-13", "2026-11-14")).toEqual({ deadline: null, conflict: true });
+  });
+  it("never suggests a deadline for a task that already has one", () => {
+    expect(validDeadlineSuggestions([{ task_id: "a", fits: true, date: "2026-11-20", reason: "" }], [t("a", "medium")], "2026-11-13", "2026-12-01")).toEqual([]);
+  });
+  it("accepts a date before the project deadline for an undated task", () => {
+    const r = validDeadlineSuggestions([{ task_id: "a", fits: true, date: "2026-11-25", reason: "x" }], [t("a", "medium", "todo", null)], "2026-11-13", "2026-12-01");
+    expect(r[0]?.date).toBe("2026-11-25");
+  });
+  it("a date on or after the project deadline is flagged instead of invented", () => {
+    const r = validDeadlineSuggestions([{ task_id: "a", fits: true, date: "2026-12-01", reason: "x" }], [t("a", "medium", "todo", null)], "2026-11-13", "2026-12-01");
+    expect(r[0]?.date).toBeNull();
+  });
+});

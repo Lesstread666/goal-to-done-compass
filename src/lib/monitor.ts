@@ -48,3 +48,35 @@ export function validPriorityChanges(changes: PriorityChange[], tasks: Task[]) {
     return [{ task: t, change: c, key: priorityKey(t, c.to_priority) }];
   });
 }
+
+const addDays = (s: string, n: number) => new Date(day(s) + n * DAY).toISOString().slice(0, 10);
+/** Last allowed task date: the day before the project deadline. */
+const lastDay = (goalDeadline: string | null) => (goalDeadline ? addDays(goalDeadline, -1) : null);
+
+/**
+ * Deadline to use when restoring a deleted task. A past date or one on/after the project deadline is a conflict;
+ * then propose tomorrow (clamped to the last allowed day), or null when no future day fits.
+ */
+export function restoreDeadline(old: string | null, today: string, goalDeadline: string | null): { deadline: string | null; conflict: boolean } {
+  const max = lastDay(goalDeadline);
+  if (!old) return { deadline: null, conflict: false };
+  if (old >= today && (!max || old <= max)) return { deadline: old, conflict: false };
+  const tomorrow = addDays(today, 1);
+  if (max && max < tomorrow) return { deadline: null, conflict: true };
+  return { deadline: max && max < tomorrow ? max : tomorrow, conflict: true };
+}
+
+export type DeadlineSuggestion = { task_id: string; fits: boolean; date: string; reason: string };
+
+/** Only open tasks with NO deadline get suggestions; dates must be from today up to the day before the project deadline. */
+export function validDeadlineSuggestions(list: DeadlineSuggestion[], tasks: Task[], today: string, goalDeadline: string | null) {
+  const max = lastDay(goalDeadline);
+  const seen = new Set<string>();
+  return list.flatMap((s) => {
+    const t = tasks.find((x) => x.id === s.task_id);
+    if (!t || t.deadline || t.status === "done" || seen.has(t.id)) return [];
+    seen.add(t.id);
+    const ok = s.fits && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && s.date >= today && (!max || s.date <= max);
+    return [{ task: t, date: ok ? s.date : null, reason: s.reason, key: `deadline:${t.id}:${ok ? "fit" : "nofit"}` }];
+  });
+}
