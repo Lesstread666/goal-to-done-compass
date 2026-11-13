@@ -5,6 +5,7 @@ import { initials, isDelayed, todayStr, type Goal, type Task } from "@/lib/goals
 import { getTeamWorkload } from "@/lib/workload";
 import { supabase } from "@/integrations/supabase/client";
 import { UserAvatar } from "@/components/social/UserAvatar";
+import { ProjectChat } from "@/components/goal/ProjectChat";
 
 function lastDays(n: number) {
   return Array.from({ length: n }, (_, i) => {
@@ -70,6 +71,7 @@ export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
         </div>
       </section>
 
+      <ProjectChat key={goal.id} goalId={goal.id}>
       <section className="glass rounded-2xl p-4">
         <h3 className="text-sm font-semibold">Progress: {pct}%</h3>
         <p className="text-xs text-muted-foreground">
@@ -137,6 +139,7 @@ export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-chart-3" />Overdue</span>
         </div>
       </section>
+      </ProjectChat>
     </aside>
   );
 }
