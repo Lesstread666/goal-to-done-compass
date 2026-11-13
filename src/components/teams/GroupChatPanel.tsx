@@ -60,8 +60,8 @@ export function GroupChatPanel({ group, onClose, onLeft }: { group: GroupSummary
   let lastDay = "";
   return (
     <aside className="glass fixed inset-0 z-50 flex flex-col bg-background lg:sticky lg:top-8 lg:z-auto lg:h-[calc(100vh-4rem)] lg:rounded-2xl lg:bg-transparent">
-      <header className="flex items-center gap-3 border-b p-4">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted"><Users className="h-6 w-6" /></span>
+      <header className="flex items-center gap-2 border-b p-3 sm:gap-3 sm:p-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted sm:h-12 sm:w-12"><Users className="h-5 w-5" /></span>
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-lg font-semibold">{group.name}</h2>
           <button className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setDialog("members")}>{members.length} member{members.length === 1 ? "" : "s"}</button>
@@ -91,9 +91,13 @@ export function GroupChatPanel({ group, onClose, onLeft }: { group: GroupSummary
           const day = new Date(m.created_at).toDateString();
           const showDay = day !== lastDay; lastDay = day;
           const groups = groupReactions(reactions, m.id, me?.id);
+          const dayPill = showDay && <div className="mb-3 flex justify-center"><span className="rounded-full bg-muted px-3 py-1 text-xs">{day === new Date().toDateString() ? "Today" : new Date(m.created_at).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}</span></div>;
+          if (m.kind === "system") return (
+            <div key={m.id}>{dayPill}<p role="status" className="text-center text-xs text-muted-foreground"><span className="rounded-full border px-3 py-1">{m.body} · {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></p></div>
+          );
           return (
             <div key={m.id}>
-              {showDay && <div className="mb-3 flex justify-center"><span className="rounded-full bg-muted px-3 py-1 text-xs">{day === new Date().toDateString() ? "Today" : new Date(m.created_at).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}</span></div>}
+              {dayPill}
               <div className="group flex gap-3">
                 <UserAvatar username={sender?.username ?? "former"} url={sender?.avatar_url ?? null} className="h-10 w-10" />
                 <div className="min-w-0 max-w-[80%] space-y-1.5">

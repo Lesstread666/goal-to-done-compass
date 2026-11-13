@@ -60,6 +60,7 @@ export type Database = {
           created_at: string
           group_id: string
           id: number
+          kind: string
           sender_id: string
         }
         Insert: {
@@ -71,6 +72,7 @@ export type Database = {
           created_at?: string
           group_id: string
           id?: never
+          kind?: string
           sender_id?: string
         }
         Update: {
@@ -82,6 +84,7 @@ export type Database = {
           created_at?: string
           group_id?: string
           id?: never
+          kind?: string
           sender_id?: string
         }
         Relationships: [
@@ -779,6 +782,7 @@ export type Database = {
           last_at: string
           last_body: string
           last_has_attachment: boolean
+          last_kind: string
           last_sender: string
           member_count: number
           name: string

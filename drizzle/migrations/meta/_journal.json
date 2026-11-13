@@ -99,6 +99,13 @@
       "when": 1794586246621,
       "tag": "0013_team_group_chats",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794586720015,
+      "tag": "0014_group_chat_system_messages",
+      "breakpoints": true
     }
   ]
 }

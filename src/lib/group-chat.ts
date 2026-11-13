@@ -2,8 +2,8 @@ import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { currentUserId, type Message, type Profile } from "@/lib/social";
 
-export type GroupSummary = { id: string; name: string; owner_id: string; member_count: number; last_body: string | null; last_sender: string | null; last_at: string | null; last_has_attachment: boolean; unread: number; created_at: string };
-export type GroupMessage = { id: number; group_id: string; sender_id: string; body: string; attachment_path: string | null; attachment_name: string | null; attachment_size: number | null; attachment_type: string | null; created_at: string };
+export type GroupSummary = { id: string; name: string; owner_id: string; member_count: number; last_body: string | null; last_sender: string | null; last_at: string | null; last_has_attachment: boolean; last_kind: string | null; unread: number; created_at: string };
+export type GroupMessage = { id: number; group_id: string; sender_id: string; body: string; attachment_path: string | null; attachment_name: string | null; attachment_size: number | null; attachment_type: string | null; kind: string; created_at: string };
 export type Reaction = { message_id: number; user_id: string; emoji: string };
 export type ReactionGroup = { emoji: string; count: number; mine: boolean };
 

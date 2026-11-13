@@ -25,7 +25,7 @@ export async function markRead(senderId: string) {
 }
 
 /** Keeps unread counts live and pops a toast for new incoming messages. Mount once per page. */
-export function useUnread(opts: { notify?: boolean } = {}) {
+export function useUnread(opts: { notify?: boolean; notifyGroups?: boolean } = {}) {
   const qc = useQueryClient();
   const q = useQuery(unreadQuery());
   useEffect(() => {
@@ -40,9 +40,21 @@ export function useUnread(opts: { notify?: boolean } = {}) {
           toast("New message", { description: msg.body?.slice(0, 80), action: { label: "Open", onClick: () => (window.location.href = "/teams") } });
         }
       })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_group_messages" }, ({ new: m }) => {
+        void qc.invalidateQueries({ queryKey: ["group-chats"] });
+        const msg = m as { group_id?: string; sender_id?: string; body?: string; kind?: string; attachment_name?: string | null };
+        if (!opts.notifyGroups || !me || msg.sender_id === me || !msg.group_id) return;
+        if (new URLSearchParams(window.location.search).get("group") === msg.group_id) return;
+        const g = qc.getQueryData<{ id: string; name: string }[]>(["group-chats"])?.find((x) => x.id === msg.group_id);
+        const gid = msg.group_id;
+        toast(g ? `New in ${g.name}` : "New group message", {
+          description: (msg.body?.trim() || (msg.attachment_name ? `📎 ${msg.attachment_name}` : "")).slice(0, 80),
+          action: { label: "Open", onClick: () => (window.location.href = `/teams?group=${gid}`) },
+        });
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [qc, opts.notify]);
+  }, [qc, opts.notify, opts.notifyGroups]);
   const groups = useQuery(groupsQuery());
   const counts = q.data ?? {};
   const groupUnread = (groups.data ?? []).reduce((a, g) => a + g.unread, 0);

@@ -26,7 +26,7 @@ export function useSignOut() {
 export function AppNav() {
   const signOut = useSignOut();
   const path = useLocation({ select: (l) => l.pathname });
-  const { total } = useUnread({ notify: path !== "/teams" });
+  const { total } = useUnread({ notify: path !== "/teams", notifyGroups: true });
   const badge = (to: string) =>
     to === "/teams" && total > 0 ? (
       <span aria-label={`${total} unread messages`} className="absolute -top-1 right-1/2 translate-x-4 rounded-full bg-destructive px-1.5 text-[10px] leading-4 font-bold text-destructive-foreground">{total > 9 ? "9+" : total}</span>

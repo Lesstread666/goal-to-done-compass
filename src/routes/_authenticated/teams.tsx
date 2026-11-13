@@ -84,7 +84,7 @@ function TeamsPage() {
         </div>
         <InvitesBanner onJoined={(id) => navigate({ to: "/dashboard", search: { goal: id } })} />
         <div className="grid gap-5 lg:grid-cols-[minmax(320px,440px)_1fr]">
-          <section className="glass h-fit space-y-4 rounded-2xl p-4 lg:sticky lg:top-8">
+          <section className="h-fit space-y-4 lg:glass lg:sticky lg:top-8 lg:rounded-2xl lg:p-4">
             <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted/50 p-1" role="tablist">
               {(["conversations", "people"] as const).map((t) => (
                 <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={cn("flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium capitalize", tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
@@ -104,7 +104,7 @@ function TeamsPage() {
                   {shownGroups.map((g) => (
                     <ConvoRow key={g.id} active={g.id === groupId} onClick={() => openGroup(g.id)} icon={<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted"><UsersIcon className="h-5 w-5" /></span>}
                       title={g.name} time={listTime(g.last_at ?? g.created_at)} unread={g.unread}
-                      preview={g.last_at ? `${sender(g.last_sender)}: ${g.last_body?.trim() || (g.last_has_attachment ? "📎 Attachment" : "")}` : `${g.member_count} members`} />
+                      preview={g.last_kind === "system" ? (g.last_body ?? "") : g.last_at ? `${sender(g.last_sender)}: ${g.last_body?.trim() || (g.last_has_attachment ? "📎 Attachment" : "")}` : `${g.member_count} members`} />
                   ))}
                 </ListSection>
                 <ListSection title={`Direct messages (${dms.length})`} open={openDms} onToggle={() => setOpenDms((v) => !v)}>
@@ -146,11 +146,11 @@ function TeamsPage() {
 
 function ListSection({ title, open, onToggle, children }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
   return (
-    <div className="border-t pt-3">
+    <div className="lg:border-t lg:pt-3">
       <button onClick={onToggle} aria-expanded={open} className="flex w-full items-center justify-between px-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
         {title} {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </button>
-      {open && <div className="mt-2 space-y-1">{children}</div>}
+      {open && <div className="mt-2 space-y-1 rounded-2xl border bg-panel/40 p-1 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">{children}</div>}
     </div>
   );
 }
