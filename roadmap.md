@@ -12,3 +12,4 @@
 - [x] Reverse accidental-completion reassessment from drag-and-drop and task status selection; 22 tests passed and signed-in verification confirmed restored priorities/dates persist after reload.
 - [x] Feature 4 AI Project Monitoring: feasibility status, priority suggestions with Accept/Dismiss/Details, deleted-essential-task warnings; completion now auto-moves dates only. Verified with a temporary store project.
 - [x] Feature 4.1: restore/replace deleted essential tasks and AI deadline suggestions for undated tasks (verified restore, duplicate-restore block, deadline accept; Create Alternative form not clicked in test).
+- [x] Teams group chats (create from teammates, owner add/remove, members rename/leave, attachments, reactions, desktop layout); verified create, send, attachment, reaction, rename, reload, remove and leave.
