@@ -45,3 +45,12 @@ export function replanTasks(tasks: Task[], goalDeadline: string | null, today: s
   }
   return out;
 }
+
+/** Keep only deadline changes; priorities are changed by approved AI suggestions instead. */
+export function datesOnly(tasks: Task[], patches: TaskPatch[]): TaskPatch[] {
+  return patches.flatMap((p) => {
+    const t = tasks.find((x) => x.id === p.id);
+    if (!t || p.deadline === t.deadline) return [];
+    return [{ ...p, priority: t.priority }];
+  });
+}

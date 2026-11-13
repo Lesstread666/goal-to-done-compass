@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { todayStr, type Goal, type Task } from "./goals";
-import { replanTasks } from "./replan";
+import { replanTasks, datesOnly } from "./replan";
 import { captureReplanUndo, reopenTaskPatches, sameCompletion, type ReplanUndo } from "./replan-undo";
 
 type StatusTransition = { taskId: string; previousStatus: Task["status"]; status: Task["status"]; completedAt: string | null };
@@ -31,9 +31,10 @@ export async function autoReplan(qc: QueryClient, goalId: string, transition: St
   const key = `ticklist:replan-undo:${goalId}:${transition.taskId}`;
   const saved = reopening ? readUndo(key) : null;
   const undo = saved && sameCompletion(saved.completedAt, transition.completedAt) ? saved : null;
-  const patches = reopening
+  // Priorities now change only through accepted AI Project Insights; dates still move automatically.
+  const patches = datesOnly(tasks, reopening
     ? reopenTaskPatches(tasks, undo, goal?.deadline ?? null, todayStr(), names)
-    : replanTasks(tasks, goal?.deadline ?? null, todayStr(), names);
+    : replanTasks(tasks, goal?.deadline ?? null, todayStr(), names));
   if (!reopening) {
     try { window.localStorage.setItem(key, JSON.stringify(captureReplanUndo(tasks, patches, transition.completedAt))); } catch { /* Storage may be disabled; reopening still reassesses urgency. */ }
   }
@@ -53,6 +54,6 @@ export async function autoReplan(qc: QueryClient, goalId: string, transition: St
   if (results.some((r) => r.error)) toast.error("Some tasks couldn't be re-planned.");
   else {
     if (reopening) { try { window.localStorage.removeItem(key); } catch { /* Optional undo history. */ } }
-    toast.success(reopening ? "Task reopened. Priorities and dates updated." : `Nice progress! Ticklist re-planned ${patches.length} task${patches.length > 1 ? "s" : ""}.`);
+    toast.success(reopening ? "Task reopened. Dates updated." : `Nice progress! Ticklist moved ${patches.length} date${patches.length > 1 ? "s" : ""}.`);
   }
 }

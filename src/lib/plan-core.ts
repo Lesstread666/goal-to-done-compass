@@ -105,7 +105,7 @@ async function generatePlanText(input: string): Promise<string> {
   return generateJson(INSTRUCTIONS, schema, "plan", input);
 }
 
-async function generateJson(instructions: string, schema: Record<string, unknown>, name: string, input: string): Promise<string> {
+export async function generateJson(instructions: string, schema: Record<string, unknown>, name: string, input: string): Promise<string> {
   // Lovable hosting injects LOVABLE_API_KEY automatically; self-hosted
   // deployments (e.g. Vercel) fall back to a direct OpenAI call.
   if (process.env["LOVABLE_API_KEY"]) {
@@ -164,6 +164,7 @@ const today = new Date().toISOString().slice(0, 10);
         description: data.description,
         deadline: data.deadline,
         participants,
+        requirements: data.context ?? "",
         user_id: context.userId,
       })
       .select()
