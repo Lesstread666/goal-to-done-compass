@@ -25,6 +25,8 @@ import { autoReplan } from "@/lib/replan-apply";
 import { getGoalStatus, type GoalStatusInfo } from "@/lib/goal-status";
 import { GoalStatusBadge, GoalStatusIcon, statusStyle } from "@/components/goal/GoalStatusIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { meQuery } from "@/lib/social";
+import { canManageProject } from "@/lib/project-permissions";
 
 function useGoalStatuses(goals: Goal[], activeId?: string) {
   const { data: activeTasks } = useQuery({ ...tasksQuery(activeId ?? ""), enabled: !!activeId });
@@ -138,6 +140,8 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
   const info = statuses[goal.id];
   const qc = useQueryClient();
   const { data: tasks = [], isLoading } = useQuery(tasksQuery(goal.id));
+  const { data: me } = useQuery(meQuery());
+  const canManage = canManageProject(goal, me?.id);
   const [q, setQ] = useState("");
   const [view, setView] = useState<"board" | "team">("board");
   const filtered = tasks.filter((t) => (t.title + t.description + (t.assignee ?? "")).toLowerCase().includes(q.toLowerCase()));
@@ -145,6 +149,7 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
   const workload = getTeamWorkload(tasks, goal.participants.map((p) => p.name), goal.deadline, todayStr());
 
   async function removeGoal() {
+    if (!canManage) throw new Error("Only the project creator can delete this project.");
     const { error } = await supabase.from("goals").delete().eq("id", goal.id).select("id").single();
     if (error) throw error;
     qc.removeQueries({ queryKey: ["tasks", goal.id] });
@@ -191,21 +196,21 @@ function GoalView({ goal, goals, onSelect, statuses }: { goal: Goal; goals: Goal
             {goal.deadline && <span className="flex items-center gap-1.5"><CalendarDays className="h-4 w-4" />Deadline {new Date(goal.deadline).toLocaleDateString()}</span>}
             <span className="flex items-center gap-1.5"><Users className="h-4 w-4" />{goal.participants.length} member{goal.participants.length === 1 ? "" : "s"}</span>
             <InviteDialog goal={goal} className="ml-auto inline-flex h-8 shrink-0 gap-1 px-2 text-xs whitespace-nowrap md:ml-0 2xl:px-2.5 2xl:text-sm" />
-            <div className="hidden items-center gap-1.5 md:ml-auto md:flex">
+            {canManage && <div className="hidden items-center gap-1.5 md:ml-auto md:flex">
               <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} className="h-8 shrink-0 gap-1 px-2 text-xs whitespace-nowrap 2xl:px-2.5 2xl:text-sm" />
               <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} trigger={(open) => (
                 <Button variant="outline" onClick={open} aria-label="Delete project" title="Delete project" className="h-8 shrink-0 gap-1 border-destructive/60 px-2 text-xs whitespace-nowrap text-destructive hover:bg-destructive/10 hover:text-destructive 2xl:px-2.5 2xl:text-sm"><Trash2 className="h-4 w-4" /> Delete project</Button>
               )} onDelete={removeGoal} />
-            </div>
+            </div>}
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 md:hidden">
+        {canManage && <div className="mt-4 grid grid-cols-2 gap-2 md:hidden">
           <EditGoalDialog goal={goal} tasks={tasks} loading={isLoading} className="w-full" />
           <DeleteDialog label="Delete project" description={`Remove “${goal.title}” and all its tasks.`} trigger={(open) => (
             <Button variant="outline" onClick={open} aria-label="Delete project" className="w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 /> Delete project</Button>
           )} onDelete={removeGoal} />
-        </div>
+        </div>}
 
         {delayedCount > 0 && (
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">

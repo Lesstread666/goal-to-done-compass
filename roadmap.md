@@ -1,4 +1,7 @@
 # Requested updates
+- [x] Restrict project edit/delete to creators; verified applied creator-only policies, desktop/mobile controls for creator and member, and member task add/edit/reload/delete.
+- [x] Mobile chat icon after team members with unread badge, full-screen chat and close-only return; verified signed-in send/reload, unread clearing, scroll restoration, and unchanged desktop overlay.
+- [x] Desktop project group chat with member-only access, nonblocking charts overlay, and persisted unread badges; verified signed-in send/reload, unread/read persistence, scrolling, sender checks and mobile unchanged.
 - [x] Edit and delete goals and tasks, with deletion confirmation.
 - [x] Add/remove participants and review/reassign tasks atomically.
 - [x] Verify persisted changes and assignment rules.- [x] Username at sign-up, profile page with avatar upload.

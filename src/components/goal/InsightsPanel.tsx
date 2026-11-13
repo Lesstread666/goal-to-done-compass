@@ -5,6 +5,7 @@ import { initials, isDelayed, todayStr, type Goal, type Task } from "@/lib/goals
 import { getTeamWorkload } from "@/lib/workload";
 import { supabase } from "@/integrations/supabase/client";
 import { UserAvatar } from "@/components/social/UserAvatar";
+import { MobileProjectChatButton, ProjectChat } from "@/components/goal/ProjectChat";
 
 function lastDays(n: number) {
   return Array.from({ length: n }, (_, i) => {
@@ -38,9 +39,9 @@ export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
 
   return (
     <aside className="space-y-5">
-      <section>
+      <ProjectChat key={goal.id} goalId={goal.id} title={goal.title} team={<section>
         <h3 className="mb-3 text-base font-semibold">Team</h3>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-5 gap-2 md:grid-cols-4 md:gap-3">
           {goal.participants.map((p) => {
             const mine = tasks.filter((t) => t.assignee === p.name);
             const late = mine.some((t) => isDelayed(t));
@@ -67,9 +68,9 @@ export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
               </div>
             );
           })}
+          <MobileProjectChatButton />
         </div>
-      </section>
-
+      </section>}>
       <section className="glass rounded-2xl p-4">
         <h3 className="text-sm font-semibold">Progress: {pct}%</h3>
         <p className="text-xs text-muted-foreground">
@@ -137,6 +138,7 @@ export function InsightsPanel({ goal, tasks }: { goal: Goal; tasks: Task[] }) {
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-chart-3" />Overdue</span>
         </div>
       </section>
+      </ProjectChat>
     </aside>
   );
 }

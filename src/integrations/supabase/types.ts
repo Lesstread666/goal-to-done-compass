@@ -285,6 +285,64 @@ export type Database = {
         }
         Relationships: []
       }
+      project_chat_reads: {
+        Row: {
+          goal_id: string
+          last_read_id: number
+          user_id: string
+        }
+        Insert: {
+          goal_id: string
+          last_read_id?: number
+          user_id?: string
+        }
+        Update: {
+          goal_id?: string
+          last_read_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_chat_reads_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_messages: {
+        Row: {
+          body: string
+          created_at: string
+          goal_id: string
+          id: number
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          goal_id: string
+          id?: never
+          sender_id?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          goal_id?: string
+          id?: never
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_messages_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assignee: string | null
@@ -387,6 +445,10 @@ export type Database = {
       }
       is_goal_member: { Args: { p_goal_id: string }; Returns: boolean }
       mark_messages_read: { Args: { p_sender: string }; Returns: undefined }
+      mark_project_chat_read: {
+        Args: { p_goal_id: string; p_message_id: number }
+        Returns: undefined
+      }
       my_pending_invites: {
         Args: never
         Returns: {
@@ -414,6 +476,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      project_chat_unread: { Args: { p_goal_id: string }; Returns: number }
       search_profiles: {
         Args: { p_term: string }
         Returns: {
