@@ -10,3 +10,4 @@
 - [x] Feature 3: AI Goal Clarifier chat before task generation.
 - [x] Teammate-aware priority reassessment and overload flags; verified 16 tests and signed-in completion, saved priorities, cleared warnings, and mobile layout.
 - [x] Reverse accidental-completion reassessment from drag-and-drop and task status selection; 22 tests passed and signed-in verification confirmed restored priorities/dates persist after reload.
+- [x] Feature 4 AI Project Monitoring: feasibility status, priority suggestions with Accept/Dismiss/Details, deleted-essential-task warnings; completion now auto-moves dates only. Verified with a temporary store project.

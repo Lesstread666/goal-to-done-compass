@@ -103,7 +103,11 @@ export async function monitorProject(supabase: SupabaseClient, goalId: string, f
   }
   const warnKeys = ai.warnings.map((w) => `warn:${w.key.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 60)}`);
   ai.warnings.forEach((w, i) => rows.push({ goal_id: goalId, kind: "warning", dedupe_key: warnKeys[i], severity: w.severity === "critical" ? "critical" : "warning", title: w.title, explanation: w.message }));
-  if (rows.length) await supabase.from("project_insights").upsert(rows, { onConflict: "goal_id,dedupe_key", ignoreDuplicates: true });
+  if (rows.length) {
+    const full = rows.map((r) => ({ task_id: null, task_title: "", from_priority: null, to_priority: null, ...r }));
+    const { error } = await supabase.from("project_insights").upsert(full, { onConflict: "goal_id,dedupe_key", ignoreDuplicates: true });
+    if (error) console.error("project_insights upsert failed", error.message);
+  }
 
   // Open suggestions/warnings the latest analysis no longer supports are retired so the list reflects current data.
   const keep = new Set([...priority.map((p) => p.key), ...warnKeys]);
