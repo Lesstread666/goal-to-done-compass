@@ -78,6 +78,13 @@
       "when": 1794558363611,
       "tag": "0010_creator_only_project_management",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794581042754,
+      "tag": "0011_project_monitoring",
+      "breakpoints": true
     }
   ]
 }

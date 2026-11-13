@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      deleted_tasks: {
+        Row: {
+          deadline: string | null
+          deleted_at: string
+          deleted_by: string | null
+          description: string
+          evaluated: boolean
+          goal_id: string
+          id: string
+          priority: string
+          status: string
+          task_id: string
+          title: string
+        }
+        Insert: {
+          deadline?: string | null
+          deleted_at?: string
+          deleted_by?: string | null
+          description?: string
+          evaluated?: boolean
+          goal_id: string
+          id?: string
+          priority?: string
+          status?: string
+          task_id: string
+          title: string
+        }
+        Update: {
+          deadline?: string | null
+          deleted_at?: string
+          deleted_by?: string | null
+          description?: string
+          evaluated?: boolean
+          goal_id?: string
+          id?: string
+          priority?: string
+          status?: string
+          task_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deleted_tasks_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goal_invites: {
         Row: {
           created_at: string
@@ -86,6 +136,7 @@ export type Database = {
           id: string
           participants: Json
           pending_invitees: Json
+          requirements: string
           status: string
           title: string
           user_id: string
@@ -97,6 +148,7 @@ export type Database = {
           id?: string
           participants?: Json
           pending_invitees?: Json
+          requirements?: string
           status?: string
           title: string
           user_id?: string
@@ -108,6 +160,7 @@ export type Database = {
           id?: string
           participants?: Json
           pending_invitees?: Json
+          requirements?: string
           status?: string
           title?: string
           user_id?: string
@@ -285,6 +338,41 @@ export type Database = {
         }
         Relationships: []
       }
+      project_assessments: {
+        Row: {
+          checked_at: string
+          fingerprint: string
+          goal_id: string
+          status: string
+          summary: string
+          uncertainty: string
+        }
+        Insert: {
+          checked_at?: string
+          fingerprint?: string
+          goal_id: string
+          status?: string
+          summary?: string
+          uncertainty?: string
+        }
+        Update: {
+          checked_at?: string
+          fingerprint?: string
+          goal_id?: string
+          status?: string
+          summary?: string
+          uncertainty?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_assessments_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: true
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_chat_reads: {
         Row: {
           goal_id: string
@@ -304,6 +392,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "project_chat_reads_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_insights: {
+        Row: {
+          created_at: string
+          dedupe_key: string
+          explanation: string
+          from_priority: string | null
+          goal_id: string
+          id: string
+          kind: string
+          resolved_at: string | null
+          severity: string
+          status: string
+          task_id: string | null
+          task_title: string
+          title: string
+          to_priority: string | null
+        }
+        Insert: {
+          created_at?: string
+          dedupe_key: string
+          explanation?: string
+          from_priority?: string | null
+          goal_id: string
+          id?: string
+          kind: string
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          task_id?: string | null
+          task_title?: string
+          title: string
+          to_priority?: string | null
+        }
+        Update: {
+          created_at?: string
+          dedupe_key?: string
+          explanation?: string
+          from_priority?: string | null
+          goal_id?: string
+          id?: string
+          kind?: string
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          task_id?: string | null
+          task_title?: string
+          title?: string
+          to_priority?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_insights_goal_id_fkey"
             columns: ["goal_id"]
             isOneToOne: false
             referencedRelation: "goals"
