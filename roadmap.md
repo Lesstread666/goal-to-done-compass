@@ -1,6 +1,7 @@
 # Requested updates
+- [x] Add unread counts to each project in the desktop list and phone picker; verified signed-in against 8 projects, identified the unread project on both screens, and confirmed badges clear after reading; 10 tests passed.
 - [x] Dashboard/sidebar project unread total and separate Teams private/group unread total; 10 tests passed and preview build OK.
-- [ ] Verify sidebar counts and read-clearing in a signed-in preview; blocked because no account matches the requesting user's email. User must sign in to the preview.
+- [x] Verify sidebar counts and read-clearing in a signed-in preview; Dashboard total matched the unread project and cleared after reading.
 - [x] Restrict project edit/delete to creators; verified applied creator-only policies, desktop/mobile controls for creator and member, and member task add/edit/reload/delete.
 - [x] Mobile chat icon after team members with unread badge, full-screen chat and close-only return; verified signed-in send/reload, unread clearing, scroll restoration, and unchanged desktop overlay.
 - [x] Desktop project group chat with member-only access, nonblocking charts overlay, and persisted unread badges; verified signed-in send/reload, unread/read persistence, scrolling, sender checks and mobile unchanged.
